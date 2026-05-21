@@ -4,11 +4,34 @@ This document lists reference files and patterns to follow (or avoid) in the pro
 
 ---
 
+## Document Status
+
+**Reference Blueprint (PSEUDOCODE).**
+
+This file is a blueprint of recommended patterns. Path-based examples may not exist yet in this repository and should be treated as pseudocode until corresponding files are implemented and validated.
+
+## Reference Inventory Status
+
+| Status | Path | Owner | Last validated |
+|---|---|---|---|
+| Planned | `/app/api/endpoints/bookings.py` | Backend team | 2026-05-21 |
+| Planned | `/app/services/booking_service.py` | Backend team | 2026-05-21 |
+| Planned | `/app/db/repositories/booking_repository.py` | Backend team | 2026-05-21 |
+| Planned | `/app/schemas/booking.py` | Backend team | 2026-05-21 |
+| Planned | `/tests/services/test_booking_service.py` | QA/backend | 2026-05-21 |
+
+Status values:
+- **Planned**: reference pattern exists only in this blueprint
+- **Implemented**: real file exists and matches pattern intent
+- **Deprecated**: pattern replaced; kept for migration history only
+
+---
+
 ## Golden References (Follow These)
 
 ### Endpoint Pattern
 
-**File:** `/app/api/endpoints/bookings.py` *(TODO: Create as reference)*
+**File:** `/app/api/endpoints/bookings.py` *(Blueprint example; treat as pseudocode until implemented)*
 
 ```python
 from fastapi import APIRouter, Depends, HTTPException, status
@@ -50,11 +73,13 @@ async def create_booking(
 - ✅ Proper response models
 - ✅ Type annotations throughout
 
+**Still valid when:** endpoint delegates all business/data logic to service+repository and response contracts stay schema-driven.
+
 ---
 
 ### Service Pattern
 
-**File:** `/app/services/booking_service.py` *(TODO: Create as reference)*
+**File:** `/app/services/booking_service.py` *(Blueprint example; treat as pseudocode until implemented)*
 
 ```python
 from app.db.repositories.booking_repository import BookingRepository
@@ -109,11 +134,13 @@ class BookingService:
 - ✅ Type hints complete
 - ✅ No direct DB access
 
+**Still valid when:** service owns business invariants and repository remains the only DB access abstraction.
+
 ---
 
 ### Repository Pattern
 
-**File:** `/app/db/repositories/booking_repository.py` *(TODO: Create as reference)*
+**File:** `/app/db/repositories/booking_repository.py` *(Blueprint example; treat as pseudocode until implemented)*
 
 ```python
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -159,11 +186,13 @@ class BookingRepository:
 - ✅ Type hints
 - ✅ Clear method names
 
+**Still valid when:** queries stay encapsulated and repository methods map 1:1 to data access intents without leaking SQL/session details upward.
+
 ---
 
 ### Pydantic Schema Pattern
 
-**File:** `/app/schemas/booking.py` *(TODO: Create as reference)*
+**File:** `/app/schemas/booking.py` *(Blueprint example; treat as pseudocode until implemented)*
 
 ```python
 from pydantic import BaseModel, EmailStr, Field
@@ -202,11 +231,13 @@ class BookingResponse(BaseModel):
 - ✅ Separate create/response schemas
 - ✅ ORM mode enabled
 
+**Still valid when:** schema constraints reflect business rules and create/response models remain separated.
+
 ---
 
 ### Test Pattern
 
-**File:** `/tests/services/test_booking_service.py` *(TODO: Create as reference)*
+**File:** `/tests/services/test_booking_service.py` *(Blueprint example; treat as pseudocode until implemented)*
 
 ```python
 import pytest
@@ -263,6 +294,8 @@ class TestBookingServiceCreate:
 - ✅ Test isolation
 - ✅ Error case coverage
 - ✅ Descriptive test names
+
+**Still valid when:** tests remain behavior-focused (including unhappy paths) and independent from execution order.
 
 ---
 

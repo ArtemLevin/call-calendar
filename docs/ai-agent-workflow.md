@@ -4,6 +4,24 @@
 
 All complex tasks must follow this cycle. Never skip steps.
 
+
+## Assumptions / Verify first
+
+Before applying path-based examples, verify expected directories exist:
+
+```bash
+rg --files | head -n 50
+for p in app tests alembic; do
+  if [ -d "$p" ]; then
+    echo "OK: $p/"
+  else
+    echo "MISSING: $p/ (treat path examples as pseudocode)"
+  fi
+done
+```
+
+If a directory is missing, treat path examples in this document as **pseudocode** and adapt commands to the actual repository structure.
+
 ---
 
 ## Phase 1: Explore
@@ -20,8 +38,11 @@ All complex tasks must follow this cycle. Never skip steps.
 ### Explore Actions
 
 ```bash
+# Verify repo file layout first
+rg --files | head -n 50
+
 # Find related code
-grep -r "BookingService" --include="*.py" .
+rg -n "BookingService" -g "*.py"
 
 # Read file structure
 head -100 app/services/booking_service.py
@@ -263,3 +284,14 @@ Address concern 1 before merge. Concern 2 can be follow-up.
 4. **No Verification**: Misses regressions
 5. **Ignoring Types**: Causes runtime errors
 6. **Copying Legacy Patterns**: Perpetuates bad practices
+
+---
+
+## Definition of Done for doc usage
+
+- [ ] Explore → Plan → Code → Verify flow was followed and documented in the PR notes.
+- [ ] Repository structure was verified before using path-based examples (`app/`, `tests/`, `alembic/`).
+- [ ] Search/file discovery commands use `rg`-based patterns (no legacy recursive grep/find examples).
+- [ ] Verification commands were run as applicable (`make test`, `make lint`, `make typecheck`) or limitations were documented.
+- [ ] Path-specific snippets were adapted to real repository structure (or explicitly treated as pseudocode).
+- [ ] Final PR summary includes risks, tests/checks, and any unresolved assumptions.

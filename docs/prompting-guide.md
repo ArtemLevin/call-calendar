@@ -375,3 +375,119 @@ Good: Tests failing due to timezone issue.
 Root cause: datetime.utcnow() vs datetime.now(tz).
 Fix applied and verified.
 ```
+
+---
+
+## Structured Prompt Templates
+
+Use this structure for most non-trivial requests.
+
+### Template
+
+```markdown
+## Context
+- What feature/bug/task this is
+- Current state and known constraints
+
+## Constraints
+- Architecture boundaries
+- Performance/security requirements
+- Tooling or repo limitations
+
+## Acceptance Criteria
+- Observable behaviors that must pass
+- Required tests/checks
+- Error cases that must be handled
+
+## Non-goals
+- What should NOT be changed in this task
+- Explicit out-of-scope items
+
+## Expected Output Format
+- plan only / patch only / review only
+- required sections in final response
+- citations/commands/reporting requirements
+```
+
+### Example (filled)
+
+```markdown
+## Context
+Add cancellation endpoint for bookings.
+Current repo uses layered architecture with service and repository layers.
+
+## Constraints
+- Endpoint must not access DB directly.
+- Keep existing response schema style.
+- Do not introduce auth.
+
+## Acceptance Criteria
+- `POST /api/bookings/{id}/cancel` returns 200 on success.
+- Returns 404 for missing booking.
+- Unit + integration tests added.
+- `make test`, `make lint`, `make typecheck` pass.
+
+## Non-goals
+- No calendar integrations.
+- No notification delivery implementation.
+
+## Expected Output Format
+- First: implementation plan.
+- Then: patch summary with changed files.
+- Finally: test command results.
+```
+
+---
+
+## Bad assumptions to avoid
+
+- Assuming files/endpoints exist without checking repository paths first.
+- Assuming legacy examples are production-ready instead of pseudocode/reference patterns.
+- Assuming success path is enough (ignore validation, conflict, not-found, boundary cases).
+- Assuming architecture exceptions are acceptable for "small" changes.
+- Assuming tests are optional for docs-guided feature work.
+
+---
+
+## Prompt + expected artifact examples
+
+### 1) Plan only
+
+**Prompt**
+
+```text
+Create an implementation plan for adding booking cancellation.
+Do not modify files yet.
+Include risks, dependencies, and test strategy.
+```
+
+**Expected artifact**
+- Markdown plan with sections: scope, files, risks, tests.
+- No code patch.
+
+### 2) Patch only
+
+**Prompt**
+
+```text
+Apply the approved plan to add cancellation support.
+Modify only the listed files.
+Return concise summary + commands run.
+```
+
+**Expected artifact**
+- Concrete code/doc patch in specified files.
+- Commit-ready changes + verification commands.
+
+### 3) Review only
+
+**Prompt**
+
+```text
+Review this diff for architecture, typing, tests, and security.
+Do not change code. Provide must-fix vs should-fix findings.
+```
+
+**Expected artifact**
+- Structured review report.
+- No file edits.
