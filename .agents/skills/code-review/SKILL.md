@@ -23,7 +23,6 @@ done
 If those directories are missing, treat path-based examples as **pseudocode** and adapt commands to real repo paths.
 
 
-
 ## Quick start (5 шагов)
 
 1. Проверить структуру репозитория и ключевые пути (`rg --files`, директории `app/tests/alembic`).

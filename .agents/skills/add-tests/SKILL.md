@@ -39,6 +39,8 @@ If those directories are missing, treat path-based examples as **pseudocode** an
 - Отсутствие обновления тестов/документации при изменении поведения/API.
 - Оставленные временные артефакты (debug-код, лишние правки, неочищенный diff).
 
+## Purpose
+
 Create thorough tests that verify functionality, catch regressions, and document expected behavior.
 
 ## Workflow
