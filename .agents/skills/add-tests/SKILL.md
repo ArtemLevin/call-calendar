@@ -5,6 +5,23 @@ description: Write comprehensive tests for modules following project testing con
 
 # Add Tests Skill
 
+## Assumptions / Verify first
+
+Before following examples below, verify the expected project paths exist in the current repository:
+
+```bash
+rg --files | head -n 50
+for p in app tests alembic; do
+  if [ -d "$p" ]; then
+    echo "OK: $p/"
+  else
+    echo "MISSING: $p/ (examples below may be pseudocode)"
+  fi
+done
+```
+
+If those directories are missing, treat path-based examples as **pseudocode** and adapt commands to real repo paths.
+
 ## Purpose
 
 Create thorough tests that verify functionality, catch regressions, and document expected behavior.
@@ -32,6 +49,33 @@ Write a test plan:
    - Boundary values
 4. Identify mocks needed.
 
+
+### Minimal Test Set per Public Method
+
+For **each** public method/endpoint, include at least this minimum case set:
+
+| Category | Goal | Example Assertions |
+|---|---|---|
+| Happy path | Valid input succeeds | status/result fields are correct; side effects persisted |
+| Validation failure | Invalid input is rejected | raises validation/domain error; no write performed |
+| Not found / conflict | Missing resource or business conflict handled | 404/409 (API) or domain exception (service) |
+| Boundary conditions | Limits are enforced | min/max lengths, time boundaries, empty/non-empty transitions |
+| Idempotency / concurrency* | Repeats/races are safe | repeated call stable OR concurrent calls do not corrupt state |
+
+\* Apply idempotency/concurrency cases where behavior can be retried or raced (booking creation, cancellation, state transitions, etc.).
+
+Use this matrix during planning and map each row to concrete test names.
+
+Example naming template:
+
+```text
+test_<method>_success
+test_<method>_validation_failure
+test_<method>_not_found_or_conflict
+test_<method>_boundary_<condition>
+test_<method>_idempotent_or_concurrent
+```
+
 Example plan:
 
 ```
@@ -58,6 +102,7 @@ Mocks needed:
 #### Step 1: Create Test File
 
 ```python
+# PSEUDOCODE (adapt paths to this repo if needed)
 # /tests/services/test_booking_service.py
 import pytest
 from datetime import datetime, timedelta
@@ -133,6 +178,7 @@ class TestBookingServiceCreate:
 #### Step 2: Add Integration Tests
 
 ```python
+# PSEUDOCODE (adapt paths to this repo if needed)
 # /tests/api/test_booking.py
 import pytest
 from httpx import AsyncClient
@@ -181,6 +227,7 @@ async def test_create_booking_conflict(client: AsyncClient):
 #### Step 3: Add Fixtures
 
 ```python
+# PSEUDOCODE (adapt paths to this repo if needed)
 # /tests/conftest.py
 import pytest
 from httpx import AsyncClient
@@ -270,3 +317,13 @@ async def test_async_method():
 - [ ] Error cases are tested.
 - [ ] Edge cases are covered.
 - [ ] No flaky tests.
+
+## Definition of Done (DoD)
+
+- [ ] Scope of change is implemented and matches the agreed plan for this skill task.
+- [ ] Tests for new/changed behavior are added or updated (happy path, edge cases, and error conditions as applicable).
+- [ ] `make test`, `make lint`, and `make typecheck` have been run, and failures are resolved or explicitly documented.
+- [ ] Documentation is added/updated when behavior, API contracts, or operational workflow changed.
+- [ ] Layered architecture remains valid: Endpoint → Service → Repository (no bypassing service layer).
+- [ ] Type annotations and validation are present for new/changed public interfaces.
+- [ ] Final diff is reviewed for unintended changes (no dead code, commented-out debug code, or unrelated edits).

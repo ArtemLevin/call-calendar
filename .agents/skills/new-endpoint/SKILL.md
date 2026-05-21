@@ -5,6 +5,23 @@ description: Create new API endpoints following project architecture patterns. U
 
 # New Endpoint Skill
 
+## Assumptions / Verify first
+
+Before following examples below, verify the expected project paths exist in the current repository:
+
+```bash
+rg --files | head -n 50
+for p in app tests alembic; do
+  if [ -d "$p" ]; then
+    echo "OK: $p/"
+  else
+    echo "MISSING: $p/ (examples below may be pseudocode)"
+  fi
+done
+```
+
+If those directories are missing, treat path-based examples as **pseudocode** and adapt commands to real repo paths.
+
 ## Purpose
 
 Add new API endpoints that follow the layered architecture: Endpoint → Service → Repository → Database.
@@ -50,6 +67,7 @@ Write an implementation plan:
 #### Step 1: Define Pydantic Schema
 
 ```python
+# PSEUDOCODE (adapt paths to this repo if needed)
 # /app/schemas/booking.py
 from pydantic import BaseModel, EmailStr, Field
 from datetime import datetime
@@ -77,6 +95,7 @@ class BookingResponse(BaseModel):
 #### Step 2: Add Repository Method
 
 ```python
+# PSEUDOCODE (adapt paths to this repo if needed)
 # /app/db/repositories/booking_repository.py
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
@@ -98,6 +117,7 @@ class BookingRepository:
 #### Step 3: Add Service Method
 
 ```python
+# PSEUDOCODE (adapt paths to this repo if needed)
 # /app/services/booking_service.py
 from app.db.repositories.booking_repository import BookingRepository
 from app.db.models.booking import Booking
@@ -126,6 +146,7 @@ class BookingService:
 #### Step 4: Create Endpoint
 
 ```python
+# PSEUDOCODE (adapt paths to this repo if needed)
 # /app/api/endpoints/bookings.py
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -167,6 +188,7 @@ async def get_booking(
 #### Step 5: Add Exception Class
 
 ```python
+# PSEUDOCODE (adapt paths to this repo if needed)
 # /app/exceptions.py
 class BookingNotFoundError(Exception):
     """Raised when a booking is not found."""
@@ -256,3 +278,13 @@ except ConflictError as e:
 - [ ] Error handling implemented.
 - [ ] Type annotations complete.
 - [ ] Tests written.
+
+## Definition of Done (DoD)
+
+- [ ] Scope of change is implemented and matches the agreed plan for this skill task.
+- [ ] Tests for new/changed behavior are added or updated (happy path, edge cases, and error conditions as applicable).
+- [ ] `make test`, `make lint`, and `make typecheck` have been run, and failures are resolved or explicitly documented.
+- [ ] Documentation is added/updated when behavior, API contracts, or operational workflow changed.
+- [ ] Layered architecture remains valid: Endpoint → Service → Repository (no bypassing service layer).
+- [ ] Type annotations and validation are present for new/changed public interfaces.
+- [ ] Final diff is reviewed for unintended changes (no dead code, commented-out debug code, or unrelated edits).

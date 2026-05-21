@@ -5,6 +5,23 @@ description: Plan and execute database migrations safely. Use when schema change
 
 # DB Migration Skill
 
+## Assumptions / Verify first
+
+Before following examples below, verify the expected project paths exist in the current repository:
+
+```bash
+rg --files | head -n 50
+for p in app tests alembic; do
+  if [ -d "$p" ]; then
+    echo "OK: $p/"
+  else
+    echo "MISSING: $p/ (examples below may be pseudocode)"
+  fi
+done
+```
+
+If those directories are missing, treat path-based examples as **pseudocode** and adapt commands to real repo paths.
+
 ## Purpose
 
 Safely modify database schema while preserving data and maintaining backward compatibility during deployment.
@@ -61,6 +78,7 @@ alembic revision -m "add_status_to_bookings"
 #### Step 2: Edit Migration File
 
 ```python
+# PSEUDOCODE (adapt paths to this repo if needed)
 # /alembic/versions/001_add_status_to_bookings.py
 """add status to bookings
 
@@ -102,6 +120,7 @@ def downgrade() -> None:
 #### Step 3: Update Models
 
 ```python
+# PSEUDOCODE (adapt paths to this repo if needed)
 # /app/db/models/booking.py
 from sqlalchemy import Column, Integer, String, DateTime, Enum as SQLEnum
 from sqlalchemy.sql import func
@@ -127,6 +146,7 @@ class Booking(Base):
 #### Step 4: Update Pydantic Schemas
 
 ```python
+# PSEUDOCODE (adapt paths to this repo if needed)
 # /app/schemas/booking.py
 from pydantic import BaseModel, EmailStr, Field
 from datetime import datetime
@@ -229,3 +249,13 @@ def upgrade() -> None:
 - [ ] No data loss.
 - [ ] Backward compatible during rollout.
 - [ ] Indexes added for new queries.
+
+## Definition of Done (DoD)
+
+- [ ] Scope of change is implemented and matches the agreed plan for this skill task.
+- [ ] Tests for new/changed behavior are added or updated (happy path, edge cases, and error conditions as applicable).
+- [ ] `make test`, `make lint`, and `make typecheck` have been run, and failures are resolved or explicitly documented.
+- [ ] Documentation is added/updated when behavior, API contracts, or operational workflow changed.
+- [ ] Layered architecture remains valid: Endpoint → Service → Repository (no bypassing service layer).
+- [ ] Type annotations and validation are present for new/changed public interfaces.
+- [ ] Final diff is reviewed for unintended changes (no dead code, commented-out debug code, or unrelated edits).
