@@ -49,6 +49,33 @@ Write a test plan:
    - Boundary values
 4. Identify mocks needed.
 
+
+### Minimal Test Set per Public Method
+
+For **each** public method/endpoint, include at least this minimum case set:
+
+| Category | Goal | Example Assertions |
+|---|---|---|
+| Happy path | Valid input succeeds | status/result fields are correct; side effects persisted |
+| Validation failure | Invalid input is rejected | raises validation/domain error; no write performed |
+| Not found / conflict | Missing resource or business conflict handled | 404/409 (API) or domain exception (service) |
+| Boundary conditions | Limits are enforced | min/max lengths, time boundaries, empty/non-empty transitions |
+| Idempotency / concurrency* | Repeats/races are safe | repeated call stable OR concurrent calls do not corrupt state |
+
+\* Apply idempotency/concurrency cases where behavior can be retried or raced (booking creation, cancellation, state transitions, etc.).
+
+Use this matrix during planning and map each row to concrete test names.
+
+Example naming template:
+
+```text
+test_<method>_success
+test_<method>_validation_failure
+test_<method>_not_found_or_conflict
+test_<method>_boundary_<condition>
+test_<method>_idempotent_or_concurrent
+```
+
 Example plan:
 
 ```
