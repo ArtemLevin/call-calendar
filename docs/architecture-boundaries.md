@@ -28,6 +28,17 @@ Endpoint → Service → Repository → Model
 
 **Dependencies flow inward. Never upward.**
 
+
+## Architecture Decision Checklist (before merge)
+
+- [ ] Endpoint layer contains only HTTP concerns (validation mapping, status codes, response serialization).
+- [ ] Business rules are implemented in Service layer, not in endpoints/models.
+- [ ] Data access goes through Repository layer only (no direct session/model use in endpoints).
+- [ ] New/changed interfaces are typed and validated (Pydantic/domain exceptions where applicable).
+- [ ] Error mapping is explicit (domain errors -> HTTP errors at endpoint boundary).
+- [ ] Tests cover happy path and at least one failure path for changed behavior.
+- [ ] No new circular or upward dependencies introduced.
+
 ---
 
 ## Prohibited Patterns
@@ -71,6 +82,7 @@ async def create_booking(data: BookingCreate, db: AsyncSession):
 
 ```python
 # RIGHT - Business logic in service
+# PSEUDOCODE (adapt paths to this repo if needed)
 # /app/services/booking_service.py
 class BookingService:
     async def create_booking(self, data: BookingCreate) -> Booking:
@@ -147,11 +159,32 @@ class BookingResponse(BaseModel):
 
 ---
 
+
+## Typical violations seen in PRs
+
+1. **Repository instantiated directly inside endpoint handler**  
+   *Fix:* inject Service and keep repository wiring in dependency/provider layer.
+
+2. **Validation/business branching in endpoint (`if` chains for domain rules)**  
+   *Fix:* move rule checks to Service and convert domain exceptions to HTTP responses at endpoint boundary.
+
+3. **Model method performs I/O (HTTP call, message publish, file write)**  
+   *Fix:* keep models data-focused; orchestrate side effects from Service layer.
+
+4. **Duplicate DTO/schema for same response contract**  
+   *Fix:* keep a single canonical schema and reuse it across endpoints/services.
+
+5. **Service bypassed for read paths because "it's simple"**  
+   *Fix:* route all read/write flows through Service to keep invariants centralized.
+
+---
+
 ## Allowed Patterns
 
 ### ✅ Endpoint → Service → Repository
 
 ```python
+# PSEUDOCODE (adapt paths to this repo if needed)
 # /app/api/endpoints/bookings.py
 @router.post("/")
 async def create_booking(
@@ -161,6 +194,7 @@ async def create_booking(
     booking = await service.create_booking(data)
     return BookingResponse.model_validate(booking)
 
+# PSEUDOCODE (adapt paths to this repo if needed)
 # /app/services/booking_service.py
 class BookingService:
     def __init__(self, repo: BookingRepository):
@@ -169,6 +203,7 @@ class BookingService:
     async def create_booking(self, data: BookingCreate) -> Booking:
         return await self.repo.create(data)
 
+# PSEUDOCODE (adapt paths to this repo if needed)
 # /app/db/repositories/booking_repository.py
 class BookingRepository:
     async def create(self, data: BookingCreate) -> Booking:
@@ -198,6 +233,7 @@ class BookingCreate(BaseModel):
 ### ✅ Custom Exceptions
 
 ```python
+# PSEUDOCODE (adapt paths to this repo if needed)
 # /app/exceptions.py
 class BookingNotFoundError(Exception):
     def __init__(self, booking_id: int):
@@ -207,6 +243,7 @@ class SlotNotAvailableError(Exception):
     def __init__(self, slot_start: datetime):
         super().__init__(f"Slot {slot_start} is not available")
 
+# PSEUDOCODE (adapt paths to this repo if needed)
 # /app/api/endpoints/bookings.py
 @router.post("/")
 async def create_booking(data: BookingCreate, service: BookingService):
