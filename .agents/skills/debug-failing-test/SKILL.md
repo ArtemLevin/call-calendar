@@ -5,6 +5,23 @@ description: Diagnose root cause of failing tests through systematic investigati
 
 # Debug Failing Test Skill
 
+## Assumptions / Verify first
+
+Before following examples below, verify the expected project paths exist in the current repository:
+
+```bash
+rg --files | head -n 50
+for p in app tests alembic; do
+  if [ -d "$p" ]; then
+    echo "OK: $p/"
+  else
+    echo "MISSING: $p/ (examples below may be pseudocode)"
+  fi
+done
+```
+
+If those directories are missing, treat path-based examples as **pseudocode** and adapt commands to real repo paths.
+
 ## Purpose
 
 Identify why a test is failing by gathering evidence, forming hypotheses, and testing them systematically.
