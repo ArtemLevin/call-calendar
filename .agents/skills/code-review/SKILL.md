@@ -175,3 +175,13 @@ Minor suggestion: consider adding docstring to `calculate_availability`.
 - [ ] Tests cover main scenarios.
 - [ ] No security issues.
 - [ ] Code is maintainable.
+
+## Definition of Done (DoD)
+
+- [ ] Scope of change is implemented and matches the agreed plan for this skill task.
+- [ ] Tests for new/changed behavior are added or updated (happy path, edge cases, and error conditions as applicable).
+- [ ] `make test`, `make lint`, and `make typecheck` have been run, and failures are resolved or explicitly documented.
+- [ ] Documentation is added/updated when behavior, API contracts, or operational workflow changed.
+- [ ] Layered architecture remains valid: Endpoint → Service → Repository (no bypassing service layer).
+- [ ] Type annotations and validation are present for new/changed public interfaces.
+- [ ] Final diff is reviewed for unintended changes (no dead code, commented-out debug code, or unrelated edits).
