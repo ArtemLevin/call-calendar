@@ -5,6 +5,40 @@ description: Review code changes for architecture, tests, types and project conv
 
 # Code Review Skill
 
+## Assumptions / Verify first
+
+Before following examples below, verify the expected project paths exist in the current repository:
+
+```bash
+rg --files | head -n 50
+for p in app tests alembic; do
+  if [ -d "$p" ]; then
+    echo "OK: $p/"
+  else
+    echo "MISSING: $p/ (examples below may be pseudocode)"
+  fi
+done
+```
+
+If those directories are missing, treat path-based examples as **pseudocode** and adapt commands to real repo paths.
+
+
+## Quick start (5 шагов)
+
+1. Проверить структуру репозитория и ключевые пути (`rg --files`, директории `app/tests/alembic`).
+2. Определить целевой scope: какие файлы/методы/сценарии меняются.
+3. Выполнить минимальный сценарий этого skill (по фазам Explore → Plan → Code → Verify).
+4. Проверить результат локально (`make test`, `make lint`, `make typecheck` при применимости).
+5. Сверить итог с `Definition of Done (DoD)` перед PR/merge.
+
+## Common pitfalls
+
+- Пропуск шага проверки путей и слепое копирование path-based примеров.
+- Фокус только на happy path без edge/error/conflict сценариев.
+- Нарушение архитектурных границ (обход слоя Service или смешение ответственности).
+- Отсутствие обновления тестов/документации при изменении поведения/API.
+- Оставленные временные артефакты (debug-код, лишние правки, неочищенный diff).
+
 ## Purpose
 
 Ensure code quality, architectural compliance, type safety, and maintainability before merging changes.
@@ -158,3 +192,13 @@ Minor suggestion: consider adding docstring to `calculate_availability`.
 - [ ] Tests cover main scenarios.
 - [ ] No security issues.
 - [ ] Code is maintainable.
+
+## Definition of Done (DoD)
+
+- [ ] Scope of change is implemented and matches the agreed plan for this skill task.
+- [ ] Tests for new/changed behavior are added or updated (happy path, edge cases, and error conditions as applicable).
+- [ ] `make test`, `make lint`, and `make typecheck` have been run, and failures are resolved or explicitly documented.
+- [ ] Documentation is added/updated when behavior, API contracts, or operational workflow changed.
+- [ ] Layered architecture remains valid: Endpoint → Service → Repository (no bypassing service layer).
+- [ ] Type annotations and validation are present for new/changed public interfaces.
+- [ ] Final diff is reviewed for unintended changes (no dead code, commented-out debug code, or unrelated edits).

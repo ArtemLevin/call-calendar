@@ -62,7 +62,7 @@ docker logs app-container --tail 100
 docker logs app-container 2>&1 | grep -i error
 
 # Search for specific pattern
-grep -r "BookingNotFoundError" logs/
+rg -n "BookingNotFoundError" logs/
 ```
 
 ### Runtime Inspection
