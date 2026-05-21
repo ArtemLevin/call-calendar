@@ -1,5 +1,31 @@
 # AI Agent Guidelines
 
+
+## Quick start (5 шагов)
+
+1. Проверьте структуру репозитория и наличие ключевых директорий (`app/`, `tests/`, `alembic/`).
+2. Определите scope задачи и соответствующий слой архитектуры (Endpoint / Service / Repository / DB).
+3. Выполните цикл `Explore → Plan → Code → Verify` небольшими инкрементами.
+4. Прогоните обязательные проверки (`make test`, `make lint`, `make typecheck`).
+5. Сверьте результат с `Definition of Done` перед PR/merge.
+
+## Assumptions / Verify first
+
+Перед использованием path-based примеров проверьте, что ожидаемая структура действительно существует:
+
+```bash
+rg --files | head -n 50
+for p in app tests alembic; do
+  if [ -d "$p" ]; then
+    echo "OK: $p/"
+  else
+    echo "MISSING: $p/ (примеры ниже считаются pseudocode)"
+  fi
+done
+```
+
+Если директория отсутствует, воспринимайте пути в примерах как **pseudocode** и адаптируйте команды под фактическую структуру репозитория.
+
 ## Project Overview
 
 Booking calendar service (Cal.com-like) where users publish available time slots and others book meetings.
@@ -280,3 +306,13 @@ if not available:
 - `explorer` — Read-only code investigation
 - `debugger` — Bug diagnosis (no code changes)
 - `reviewer` — Code review feedback
+
+## Definition of Done (DoD)
+
+- [ ] Изменения реализуют согласованный scope задачи и соответствуют архитектурному слою.
+- [ ] Для нового/измененного поведения добавлены или обновлены тесты (happy path, edge, error/conflict; concurrency где применимо).
+- [ ] Выполнены `make test`, `make lint`, `make typecheck`; падения устранены или явно задокументированы.
+- [ ] Документация обновлена при изменении API, поведения или операционного процесса.
+- [ ] Нет нарушений архитектуры `Endpoint → Service → Repository → Database`.
+- [ ] Сохранена типизация и валидация входных/выходных контрактов.
+- [ ] Финальный diff очищен от временного debug-кода и нерелевантных правок.
