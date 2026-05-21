@@ -25,3 +25,25 @@ You can also run full checks in a mirror-backed virtualenv:
 export PIP_INDEX_URL="https://pypi.my-company.local/simple"
 make test-ci-mirror
 ```
+
+## Setup via local wheelhouse (offline-friendly)
+
+### 1) Build wheelhouse (in environment with package access)
+
+```bash
+# optionally with mirror
+export PIP_INDEX_URL="https://pypi.my-company.local/simple"
+make build-wheelhouse
+```
+
+### 2) Install from local wheelhouse (no index access required)
+
+```bash
+make setup-wheelhouse
+```
+
+### 3) Run checks using wheelhouse-installed environment
+
+```bash
+make test-ci-wheelhouse
+```

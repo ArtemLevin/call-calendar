@@ -1,7 +1,7 @@
 # Booking Calendar Service - Development Commands
 # ================================================
 
-.PHONY: setup setup-mirror dev test lint typecheck migrate coverage clean help test-ci-mirror
+.PHONY: setup setup-mirror setup-wheelhouse build-wheelhouse dev test lint typecheck migrate coverage clean help test-ci-mirror test-ci-wheelhouse
 
 # Configuration
 PYTHON := python3
@@ -27,6 +27,16 @@ setup-mirror: ## Setup via internal Python package mirror
 	@echo "Setting up project via mirror..."
 	./scripts/setup_with_mirror.sh
 	@echo "Mirror setup complete!"
+
+setup-wheelhouse: ## Setup from local wheelhouse (offline install)
+	@echo "Setting up project from wheelhouse..."
+	./scripts/setup_from_wheelhouse.sh
+	@echo "Wheelhouse setup complete!"
+
+build-wheelhouse: ## Download dependencies into local wheelhouse
+	@echo "Building local wheelhouse..."
+	./scripts/build_wheelhouse.sh
+	@echo "Wheelhouse build complete!"
 
 setup-db: ## Initialize database
 	@echo "Initializing database..."
@@ -184,6 +194,14 @@ help: ## Show this help message
 test-ci-mirror: ## Setup from mirror and run tests/lint/typecheck
 	@echo "Running CI checks with mirror-backed setup..."
 	./scripts/setup_with_mirror.sh
+	. .venv/bin/activate && $(PYTEST) tests/ -v
+	. .venv/bin/activate && $(RUFF) check app/ tests/
+	. .venv/bin/activate && $(MYPY) app/ --strict
+
+
+test-ci-wheelhouse: ## Install from local wheelhouse and run tests/lint/typecheck
+	@echo "Running CI checks with wheelhouse-backed setup..."
+	./scripts/setup_from_wheelhouse.sh
 	. .venv/bin/activate && $(PYTEST) tests/ -v
 	. .venv/bin/activate && $(RUFF) check app/ tests/
 	. .venv/bin/activate && $(MYPY) app/ --strict
