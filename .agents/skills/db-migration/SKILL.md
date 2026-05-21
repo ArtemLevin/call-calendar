@@ -22,6 +22,25 @@ done
 
 If those directories are missing, treat path-based examples as **pseudocode** and adapt commands to real repo paths.
 
+
+
+## Quick start (5 шагов)
+
+1. Проверить структуру репозитория и ключевые пути (`rg --files`, директории `app/tests/alembic`).
+2. Определить целевой scope: какие файлы/методы/сценарии меняются.
+3. Выполнить минимальный сценарий этого skill (по фазам Explore → Plan → Code → Verify).
+4. Проверить результат локально (`make test`, `make lint`, `make typecheck` при применимости).
+5. Сверить итог с `Definition of Done (DoD)` перед PR/merge.
+
+## Common pitfalls
+
+- Пропуск шага проверки путей и слепое копирование path-based примеров.
+- Фокус только на happy path без edge/error/conflict сценариев.
+- Нарушение архитектурных границ (обход слоя Service или смешение ответственности).
+- Отсутствие обновления тестов/документации при изменении поведения/API.
+- Оставленные временные артефакты (debug-код, лишние правки, неочищенный diff).
+
+
 ## Purpose
 
 Safely modify database schema while preserving data and maintaining backward compatibility during deployment.
