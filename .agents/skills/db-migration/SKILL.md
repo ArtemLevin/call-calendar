@@ -23,6 +23,7 @@ done
 If those directories are missing, treat path-based examples as **pseudocode** and adapt commands to real repo paths.
 
 
+
 ## Quick start (5 шагов)
 
 1. Проверить структуру репозитория и ключевые пути (`rg --files`, директории `app/tests/alembic`).
@@ -38,6 +39,7 @@ If those directories are missing, treat path-based examples as **pseudocode** an
 - Нарушение архитектурных границ (обход слоя Service или смешение ответственности).
 - Отсутствие обновления тестов/документации при изменении поведения/API.
 - Оставленные временные артефакты (debug-код, лишние правки, неочищенный diff).
+
 
 ## Purpose
 
