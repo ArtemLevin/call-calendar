@@ -5,6 +5,23 @@ description: Restructure and improve code quality without changing behavior. Use
 
 # Refactor Module Skill
 
+## Assumptions / Verify first
+
+Before following examples below, verify the expected project paths exist in the current repository:
+
+```bash
+rg --files | head -n 50
+for p in app tests alembic; do
+  if [ -d "$p" ]; then
+    echo "OK: $p/"
+  else
+    echo "MISSING: $p/ (examples below may be pseudocode)"
+  fi
+done
+```
+
+If those directories are missing, treat path-based examples as **pseudocode** and adapt commands to real repo paths.
+
 ## Purpose
 
 Improve code structure, readability, and maintainability while preserving existing functionality.
@@ -20,8 +37,8 @@ Improve code structure, readability, and maintainability while preserving existi
 
 ```bash
 # Find usages
-grep -r "from app.services.booking" app/ tests/
-grep -r "import BookingService" app/ tests/
+rg -n "from app\.services\.booking" app tests
+rg -n "import BookingService" app tests
 
 # Run tests before refactoring
 make test
@@ -58,6 +75,7 @@ Write a refactoring plan:
 
 **Before:**
 ```python
+# PSEUDOCODE (adapt paths to this repo if needed)
 # /app/services/booking_service.py
 class BookingService:
     async def create_booking(self, slot_start, customer_name, customer_email):
@@ -81,6 +99,7 @@ class BookingService:
 
 **After:**
 ```python
+# PSEUDOCODE (adapt paths to this repo if needed)
 # /app/services/validators/booking_validator.py
 from app.exceptions import InvalidEmailError, InvalidNameError
 
@@ -276,3 +295,13 @@ def create_booking(booking_data: BookingCreate):
 - [ ] SOLID principles applied.
 - [ ] Type hints complete.
 - [ ] Documentation updated.
+
+## Definition of Done (DoD)
+
+- [ ] Scope of change is implemented and matches the agreed plan for this skill task.
+- [ ] Tests for new/changed behavior are added or updated (happy path, edge cases, and error conditions as applicable).
+- [ ] `make test`, `make lint`, and `make typecheck` have been run, and failures are resolved or explicitly documented.
+- [ ] Documentation is added/updated when behavior, API contracts, or operational workflow changed.
+- [ ] Layered architecture remains valid: Endpoint → Service → Repository (no bypassing service layer).
+- [ ] Type annotations and validation are present for new/changed public interfaces.
+- [ ] Final diff is reviewed for unintended changes (no dead code, commented-out debug code, or unrelated edits).

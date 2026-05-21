@@ -41,13 +41,13 @@ Explore the codebase to understand structure, find usages, and gather context wi
 
 ```bash
 # Find all Python files
-find . -name "*.py" -type f
+rg --files -g "*.py"
 
 # Find test files
-find . -path "*/tests/*" -name "*.py"
+rg --files tests -g "*.py"
 
 # Find files containing specific pattern
-grep -r "class BookingService" --include="*.py" .
+rg -n "class BookingService" -g "*.py"
 ```
 
 ### Content Analysis
@@ -60,17 +60,17 @@ head -50 app/services/booking_service.py
 wc -l app/**/*.py
 
 # Search for usages
-grep -r "BookingService" --include="*.py" . | head -20
+rg -n "BookingService" -g "*.py" | head -20
 ```
 
 ### Dependency Mapping
 
 ```bash
 # Find imports
-grep -r "from app.services" --include="*.py" .
+rg -n "from app\.services" -g "*.py"
 
 # Find circular dependencies
-grep -r "import.*app" --include="*.py" . | sort | uniq
+rg -n "import.*app" -g "*.py" | sort -u
 ```
 
 ## Output Format
