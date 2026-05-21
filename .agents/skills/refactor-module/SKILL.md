@@ -20,8 +20,8 @@ Improve code structure, readability, and maintainability while preserving existi
 
 ```bash
 # Find usages
-grep -r "from app.services.booking" app/ tests/
-grep -r "import BookingService" app/ tests/
+rg -n "from app\.services\.booking" app tests
+rg -n "import BookingService" app tests
 
 # Run tests before refactoring
 make test
