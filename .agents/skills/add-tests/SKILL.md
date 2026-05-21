@@ -5,6 +5,23 @@ description: Write comprehensive tests for modules following project testing con
 
 # Add Tests Skill
 
+## Assumptions / Verify first
+
+Before following examples below, verify the expected project paths exist in the current repository:
+
+```bash
+rg --files | head -n 50
+for p in app tests alembic; do
+  if [ -d "$p" ]; then
+    echo "OK: $p/"
+  else
+    echo "MISSING: $p/ (examples below may be pseudocode)"
+  fi
+done
+```
+
+If those directories are missing, treat path-based examples as **pseudocode** and adapt commands to real repo paths.
+
 ## Purpose
 
 Create thorough tests that verify functionality, catch regressions, and document expected behavior.
@@ -58,6 +75,7 @@ Mocks needed:
 #### Step 1: Create Test File
 
 ```python
+# PSEUDOCODE (adapt paths to this repo if needed)
 # /tests/services/test_booking_service.py
 import pytest
 from datetime import datetime, timedelta
@@ -133,6 +151,7 @@ class TestBookingServiceCreate:
 #### Step 2: Add Integration Tests
 
 ```python
+# PSEUDOCODE (adapt paths to this repo if needed)
 # /tests/api/test_booking.py
 import pytest
 from httpx import AsyncClient
@@ -181,6 +200,7 @@ async def test_create_booking_conflict(client: AsyncClient):
 #### Step 3: Add Fixtures
 
 ```python
+# PSEUDOCODE (adapt paths to this repo if needed)
 # /tests/conftest.py
 import pytest
 from httpx import AsyncClient
