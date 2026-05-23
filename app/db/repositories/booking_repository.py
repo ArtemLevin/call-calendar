@@ -8,38 +8,35 @@ from app.schemas.booking import BookingCreate
 
 
 class BookingRepository:
-    """Simple in-memory repository for bootstrap stage."""
-
-    def __init__(self, session: AsyncSession | None = None) -> None:
+    def __init__(self, session: AsyncSession) -> None:
+        # Why: requiring a live session makes transaction boundaries explicit,
+        # which prevents hidden in-memory behavior from diverging across environments.
         self.session = session
-        self._items: dict[int, Booking] = {}
-        self._next_id: int = 1
 
     async def get_by_id(self, booking_id: int) -> Booking | None:
-        return self._items.get(booking_id)
+        stmt: Select[tuple[Booking]] = select(Booking).where(Booking.id == booking_id)
+        result = await self.session.execute(stmt)
+        return result.scalar_one_or_none()
 
     async def create(self, data: BookingCreate) -> Booking:
         booking = Booking(
-            id=self._next_id,
             slot_start=data.slot_start,
             customer_name=data.customer_name,
             customer_email=str(data.customer_email),
         )
-        self._items[self._next_id] = booking
-        self._next_id += 1
+        self.session.add(booking)
+        # Why: persisting immediately surfaces integrity conflicts at the write point,
+        # which keeps service-level error handling accurate under concurrent traffic.
+        await self.session.commit()
+        await self.session.refresh(booking)
         return booking
 
-    async def is_slot_available(self, slot_start: str) -> bool:
-        return all(str(item.slot_start) != str(slot_start) for item in self._items.values())
+    async def is_slot_available(self, slot_start: datetime) -> bool:
+        stmt: Select[tuple[int]] = select(Booking.id).where(Booking.slot_start == slot_start).limit(1)
+        result = await self.session.execute(stmt)
+        return result.scalar_one_or_none() is None
 
     async def list_upcoming(self, from_ts: datetime, limit: int, offset: int) -> list[Booking]:
-        if self.session is None:
-            # Why: sorting by time and id guarantees deterministic paging semantics,
-            # which prevents clients from seeing duplicate or skipped records.
-            upcoming = [item for item in self._items.values() if item.slot_start >= from_ts]
-            upcoming.sort(key=lambda item: (item.slot_start, item.id))
-            return upcoming[offset : offset + limit]
-
         # Why: DB-side filtering/pagination avoids materializing full datasets in API
         # memory, which keeps latency and memory use stable as data grows.
         stmt: Select[tuple[Booking]] = (

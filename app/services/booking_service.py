@@ -11,7 +11,7 @@ class BookingService:
         self.repository = repository
 
     async def create_booking(self, data: BookingCreate) -> Booking:
-        is_available = await self.repository.is_slot_available(str(data.slot_start))
+        is_available = await self.repository.is_slot_available(data.slot_start)
         if not is_available:
             raise SlotNotAvailableError(str(data.slot_start))
         return await self.repository.create(data)

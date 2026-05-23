@@ -1,6 +1,7 @@
 from datetime import datetime
 
 import pytest
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.db.repositories.booking_repository import BookingRepository
 from app.exceptions import BookingNotFoundError, SlotNotAvailableError
@@ -9,8 +10,8 @@ from app.services.booking_service import BookingService
 
 
 @pytest.mark.asyncio
-async def test_create_booking_success() -> None:
-    service = BookingService(BookingRepository())
+async def test_create_booking_success(db_session: AsyncSession) -> None:
+    service = BookingService(BookingRepository(db_session))
     payload = BookingCreate(
         slot_start=datetime(2026, 1, 1, 10, 0),
         customer_name="Alice",
@@ -19,13 +20,13 @@ async def test_create_booking_success() -> None:
 
     booking = await service.create_booking(payload)
 
-    assert booking.id == 1
+    assert booking.id >= 1
     assert booking.customer_name == "Alice"
 
 
 @pytest.mark.asyncio
-async def test_create_booking_conflict() -> None:
-    service = BookingService(BookingRepository())
+async def test_create_booking_conflict(db_session: AsyncSession) -> None:
+    service = BookingService(BookingRepository(db_session))
     payload = BookingCreate(
         slot_start=datetime(2026, 1, 1, 10, 0),
         customer_name="Alice",
@@ -39,16 +40,16 @@ async def test_create_booking_conflict() -> None:
 
 
 @pytest.mark.asyncio
-async def test_get_booking_not_found() -> None:
-    service = BookingService(BookingRepository())
+async def test_get_booking_not_found(db_session: AsyncSession) -> None:
+    service = BookingService(BookingRepository(db_session))
 
     with pytest.raises(BookingNotFoundError):
         await service.get_by_id(999)
 
 
 @pytest.mark.asyncio
-async def test_list_upcoming_returns_sorted_page() -> None:
-    service = BookingService(BookingRepository())
+async def test_list_upcoming_returns_sorted_page(db_session: AsyncSession) -> None:
+    service = BookingService(BookingRepository(db_session))
 
     await service.create_booking(
         BookingCreate(
