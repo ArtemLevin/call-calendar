@@ -2,7 +2,7 @@ from datetime import datetime, timezone
 
 from app.db.models.booking import Booking
 from app.db.repositories.booking_repository import BookingRepository
-from app.exceptions import BookingNotFoundError, SlotNotAvailableError
+from app.exceptions import BookingNotFoundError
 from app.schemas.booking import BookingCreate, BookingUpcomingQuery
 
 
@@ -11,9 +11,6 @@ class BookingService:
         self.repository = repository
 
     async def create_booking(self, data: BookingCreate) -> Booking:
-        is_available = await self.repository.is_slot_available(data.slot_start)
-        if not is_available:
-            raise SlotNotAvailableError(str(data.slot_start))
         return await self.repository.create(data)
 
     async def get_by_id(self, booking_id: int) -> Booking:

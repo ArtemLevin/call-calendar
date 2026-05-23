@@ -1,9 +1,11 @@
 from datetime import datetime
 
 from sqlalchemy import Select, select
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.db.models.booking import Booking
+from app.exceptions import SlotNotAvailableError
 from app.schemas.booking import BookingCreate
 
 
@@ -25,16 +27,16 @@ class BookingRepository:
             customer_email=str(data.customer_email),
         )
         self.session.add(booking)
-        # Why: persisting immediately surfaces integrity conflicts at the write point,
-        # which keeps service-level error handling accurate under concurrent traffic.
-        await self.session.commit()
+        # Why: slot conflicts are a write-time race condition, so we treat database
+        # uniqueness as the source of truth and convert integrity violations into a
+        # stable domain error the API layer already knows how to expose.
+        try:
+            await self.session.commit()
+        except IntegrityError as exc:
+            await self.session.rollback()
+            raise SlotNotAvailableError(str(data.slot_start)) from exc
         await self.session.refresh(booking)
         return booking
-
-    async def is_slot_available(self, slot_start: datetime) -> bool:
-        stmt: Select[tuple[int]] = select(Booking.id).where(Booking.slot_start == slot_start).limit(1)
-        result = await self.session.execute(stmt)
-        return result.scalar_one_or_none() is None
 
     async def list_upcoming(self, from_ts: datetime, limit: int, offset: int) -> list[Booking]:
         # Why: DB-side filtering/pagination avoids materializing full datasets in API

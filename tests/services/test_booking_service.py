@@ -1,3 +1,4 @@
+import asyncio
 from datetime import datetime
 
 import pytest
@@ -37,6 +38,29 @@ async def test_create_booking_conflict(db_session: AsyncSession) -> None:
 
     with pytest.raises(SlotNotAvailableError):
         await service.create_booking(payload)
+
+
+@pytest.mark.asyncio
+async def test_create_booking_concurrent_conflict(db_session: AsyncSession) -> None:
+    service = BookingService(BookingRepository(db_session))
+    payload = BookingCreate(
+        slot_start=datetime(2026, 1, 1, 10, 30),
+        customer_name="Race",
+        customer_email="race@example.com",
+    )
+
+    # Why: concurrent create calls validate that conflict protection lives at the
+    # database boundary rather than in fragile pre-check application logic.
+    results = await asyncio.gather(
+        service.create_booking(payload),
+        service.create_booking(payload),
+        return_exceptions=True,
+    )
+    successes = [item for item in results if not isinstance(item, Exception)]
+    conflicts = [item for item in results if isinstance(item, SlotNotAvailableError)]
+
+    assert len(successes) == 1
+    assert len(conflicts) == 1
 
 
 @pytest.mark.asyncio
