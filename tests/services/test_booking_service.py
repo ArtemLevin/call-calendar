@@ -1,16 +1,18 @@
+import asyncio
 from datetime import datetime
 
 import pytest
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.db.repositories.booking_repository import BookingRepository
 from app.exceptions import BookingNotFoundError, SlotNotAvailableError
-from app.schemas.booking import BookingCreate
+from app.schemas.booking import BookingCreate, BookingUpcomingQuery
 from app.services.booking_service import BookingService
 
 
 @pytest.mark.asyncio
-async def test_create_booking_success() -> None:
-    service = BookingService(BookingRepository())
+async def test_create_booking_success(db_session: AsyncSession) -> None:
+    service = BookingService(BookingRepository(db_session))
     payload = BookingCreate(
         slot_start=datetime(2026, 1, 1, 10, 0),
         customer_name="Alice",
@@ -19,13 +21,13 @@ async def test_create_booking_success() -> None:
 
     booking = await service.create_booking(payload)
 
-    assert booking.id == 1
+    assert booking.id >= 1
     assert booking.customer_name == "Alice"
 
 
 @pytest.mark.asyncio
-async def test_create_booking_conflict() -> None:
-    service = BookingService(BookingRepository())
+async def test_create_booking_conflict(db_session: AsyncSession) -> None:
+    service = BookingService(BookingRepository(db_session))
     payload = BookingCreate(
         slot_start=datetime(2026, 1, 1, 10, 0),
         customer_name="Alice",
@@ -39,8 +41,58 @@ async def test_create_booking_conflict() -> None:
 
 
 @pytest.mark.asyncio
-async def test_get_booking_not_found() -> None:
-    service = BookingService(BookingRepository())
+async def test_create_booking_concurrent_conflict(db_session: AsyncSession) -> None:
+    service = BookingService(BookingRepository(db_session))
+    payload = BookingCreate(
+        slot_start=datetime(2026, 1, 1, 10, 30),
+        customer_name="Race",
+        customer_email="race@example.com",
+    )
+
+    # Why: concurrent create calls validate that conflict protection lives at the
+    # database boundary rather than in fragile pre-check application logic.
+    results = await asyncio.gather(
+        service.create_booking(payload),
+        service.create_booking(payload),
+        return_exceptions=True,
+    )
+    successes = [item for item in results if not isinstance(item, Exception)]
+    conflicts = [item for item in results if isinstance(item, SlotNotAvailableError)]
+
+    assert len(successes) == 1
+    assert len(conflicts) == 1
+
+
+@pytest.mark.asyncio
+async def test_get_booking_not_found(db_session: AsyncSession) -> None:
+    service = BookingService(BookingRepository(db_session))
 
     with pytest.raises(BookingNotFoundError):
         await service.get_by_id(999)
+
+
+@pytest.mark.asyncio
+async def test_list_upcoming_returns_sorted_page(db_session: AsyncSession) -> None:
+    service = BookingService(BookingRepository(db_session))
+
+    await service.create_booking(
+        BookingCreate(
+            slot_start=datetime(2026, 1, 1, 12, 0),
+            customer_name="Late",
+            customer_email="late@example.com",
+        )
+    )
+    await service.create_booking(
+        BookingCreate(
+            slot_start=datetime(2026, 1, 1, 10, 0),
+            customer_name="Early",
+            customer_email="early@example.com",
+        )
+    )
+
+    result = await service.list_upcoming(
+        BookingUpcomingQuery(from_ts=datetime(2026, 1, 1, 9, 0), limit=1, offset=0)
+    )
+
+    assert len(result) == 1
+    assert result[0].customer_name == "Early"

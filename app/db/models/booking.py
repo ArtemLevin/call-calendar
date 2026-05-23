@@ -11,7 +11,12 @@ class Booking(Base):
     __tablename__ = "bookings"
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, index=True)
-    slot_start: Mapped[datetime] = mapped_column(DateTime(timezone=False), nullable=False, index=True)
+    slot_start: Mapped[datetime] = mapped_column(
+        DateTime(timezone=False),
+        nullable=False,
+        index=True,
+        unique=True,
+    )
     customer_name: Mapped[str] = mapped_column(String(255), nullable=False)
     customer_email: Mapped[str] = mapped_column(String(255), nullable=False, index=True)
     status: Mapped[BookingStatus] = mapped_column(
