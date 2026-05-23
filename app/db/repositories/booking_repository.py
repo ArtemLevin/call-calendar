@@ -34,9 +34,18 @@ class BookingRepository:
             await self.session.commit()
         except IntegrityError as exc:
             await self.session.rollback()
-            raise SlotNotAvailableError(str(data.slot_start)) from exc
+            if self._is_slot_uniqueness_conflict(exc):
+                raise SlotNotAvailableError(str(data.slot_start)) from exc
+            raise
         await self.session.refresh(booking)
         return booking
+
+    @staticmethod
+    def _is_slot_uniqueness_conflict(exc: IntegrityError) -> bool:
+        # Why: only slot uniqueness violations should be converted into a domain
+        # availability error; other integrity failures must surface unchanged.
+        error_text = str(exc.orig).lower() if exc.orig is not None else ""
+        return "bookings.slot_start" in error_text and "unique" in error_text
 
     async def list_upcoming(self, from_ts: datetime, limit: int, offset: int) -> list[Booking]:
         # Why: DB-side filtering/pagination avoids materializing full datasets in API

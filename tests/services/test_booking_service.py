@@ -63,6 +63,13 @@ async def test_create_booking_concurrent_conflict(test_engine: AsyncEngine) -> N
     assert len(successes) == 1
     assert len(conflicts) == 1
 
+    async with session_factory() as verification_session:
+        verification_service = BookingService(BookingRepository(verification_session))
+        persisted = await verification_service.list_upcoming(
+            BookingUpcomingQuery(from_ts=datetime(2026, 1, 1, 10, 29), limit=10, offset=0)
+        )
+    assert len([booking for booking in persisted if booking.slot_start == payload.slot_start]) == 1
+
 
 @pytest.mark.asyncio
 async def test_get_booking_not_found(db_session: AsyncSession) -> None:
