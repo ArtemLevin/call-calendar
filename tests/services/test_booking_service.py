@@ -2,7 +2,7 @@ import asyncio
 from datetime import datetime
 
 import pytest
-from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.ext.asyncio import AsyncEngine, AsyncSession, async_sessionmaker
 
 from app.db.repositories.booking_repository import BookingRepository
 from app.exceptions import BookingNotFoundError, SlotNotAvailableError
@@ -41,21 +41,22 @@ async def test_create_booking_conflict(db_session: AsyncSession) -> None:
 
 
 @pytest.mark.asyncio
-async def test_create_booking_concurrent_conflict(db_session: AsyncSession) -> None:
-    service = BookingService(BookingRepository(db_session))
+async def test_create_booking_concurrent_conflict(test_engine: AsyncEngine) -> None:
+    session_factory = async_sessionmaker(test_engine, expire_on_commit=False, autoflush=False)
     payload = BookingCreate(
         slot_start=datetime(2026, 1, 1, 10, 30),
         customer_name="Race",
         customer_email="race@example.com",
     )
 
-    # Why: concurrent create calls validate that conflict protection lives at the
-    # database boundary rather than in fragile pre-check application logic.
-    results = await asyncio.gather(
-        service.create_booking(payload),
-        service.create_booking(payload),
-        return_exceptions=True,
-    )
+    async def attempt_create() -> object:
+        async with session_factory() as session:
+            service = BookingService(BookingRepository(session))
+            return await service.create_booking(payload)
+
+    # Why: AsyncSession is not safe for concurrent use, so each racing request gets
+    # an isolated session to mirror production request-scoped transaction boundaries.
+    results = await asyncio.gather(attempt_create(), attempt_create(), return_exceptions=True)
     successes = [item for item in results if not isinstance(item, Exception)]
     conflicts = [item for item in results if isinstance(item, SlotNotAvailableError)]
 
