@@ -1,23 +1,31 @@
 from collections.abc import Generator
 
 from fastapi import APIRouter, Depends, HTTPException, status
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.db.repositories.booking_repository import BookingRepository
+from app.db.session import get_db_session
 from app.exceptions import BookingNotFoundError, SlotNotAvailableError
 from app.schemas.booking import BookingCreate, BookingResponse
 from app.services.booking_service import BookingService
 
 router = APIRouter(prefix="/api/bookings", tags=["bookings"])
 
-_repository = BookingRepository()
+
+def get_booking_repository(db: AsyncSession = Depends(get_db_session)) -> BookingRepository:
+    return BookingRepository(session=db)
 
 
-def get_booking_service() -> BookingService:
-    return BookingService(_repository)
+def get_booking_service(
+    repository: BookingRepository = Depends(get_booking_repository),
+) -> BookingService:
+    return BookingService(repository)
 
 
-def get_booking_service_dep() -> Generator[BookingService, None, None]:
-    yield get_booking_service()
+def get_booking_service_dep(
+    service: BookingService = Depends(get_booking_service),
+) -> Generator[BookingService, None, None]:
+    yield service
 
 
 @router.post("/", response_model=BookingResponse, status_code=status.HTTP_201_CREATED)
