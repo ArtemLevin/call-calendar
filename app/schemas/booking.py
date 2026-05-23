@@ -17,6 +17,12 @@ class BookingCreate(BaseModel):
     customer_email: EmailStr
 
 
+class BookingUpcomingQuery(BaseModel):
+    from_ts: datetime
+    limit: int = Field(default=20, ge=1, le=100)
+    offset: int = Field(default=0, ge=0)
+
+
 class BookingResponse(BaseModel):
     id: int
     slot_start: datetime
