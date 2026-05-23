@@ -1,3 +1,5 @@
+from sqlalchemy.ext.asyncio import AsyncSession
+
 from app.db.models.booking import Booking
 from app.schemas.booking import BookingCreate
 
@@ -5,7 +7,8 @@ from app.schemas.booking import BookingCreate
 class BookingRepository:
     """Simple in-memory repository for bootstrap stage."""
 
-    def __init__(self) -> None:
+    def __init__(self, session: AsyncSession | None = None) -> None:
+        self.session = session
         self._items: dict[int, Booking] = {}
         self._next_id: int = 1
 
