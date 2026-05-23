@@ -1,7 +1,9 @@
+from datetime import datetime, timezone
+
 from app.db.models.booking import Booking
 from app.db.repositories.booking_repository import BookingRepository
 from app.exceptions import BookingNotFoundError, SlotNotAvailableError
-from app.schemas.booking import BookingCreate
+from app.schemas.booking import BookingCreate, BookingUpcomingQuery
 
 
 class BookingService:
@@ -19,3 +21,16 @@ class BookingService:
         if booking is None:
             raise BookingNotFoundError(booking_id)
         return booking
+
+    async def list_upcoming(self, query: BookingUpcomingQuery) -> list[Booking]:
+        return await self.repository.list_upcoming(
+            from_ts=query.from_ts,
+            limit=query.limit,
+            offset=query.offset,
+        )
+
+
+def get_utc_now_naive() -> datetime:
+    # Why: runtime currently stores naive datetimes in persistence, so normalizing
+    # now() to naive UTC avoids mixed-aware comparisons that would raise TypeError.
+    return datetime.now(tz=timezone.utc).replace(tzinfo=None)

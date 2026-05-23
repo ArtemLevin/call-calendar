@@ -4,7 +4,7 @@ import pytest
 
 from app.db.repositories.booking_repository import BookingRepository
 from app.exceptions import BookingNotFoundError, SlotNotAvailableError
-from app.schemas.booking import BookingCreate
+from app.schemas.booking import BookingCreate, BookingUpcomingQuery
 from app.services.booking_service import BookingService
 
 
@@ -44,3 +44,30 @@ async def test_get_booking_not_found() -> None:
 
     with pytest.raises(BookingNotFoundError):
         await service.get_by_id(999)
+
+
+@pytest.mark.asyncio
+async def test_list_upcoming_returns_sorted_page() -> None:
+    service = BookingService(BookingRepository())
+
+    await service.create_booking(
+        BookingCreate(
+            slot_start=datetime(2026, 1, 1, 12, 0),
+            customer_name="Late",
+            customer_email="late@example.com",
+        )
+    )
+    await service.create_booking(
+        BookingCreate(
+            slot_start=datetime(2026, 1, 1, 10, 0),
+            customer_name="Early",
+            customer_email="early@example.com",
+        )
+    )
+
+    result = await service.list_upcoming(
+        BookingUpcomingQuery(from_ts=datetime(2026, 1, 1, 9, 0), limit=1, offset=0)
+    )
+
+    assert len(result) == 1
+    assert result[0].customer_name == "Early"
