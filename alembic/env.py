@@ -1,1 +1,83 @@
-"""Alembic environment bootstrap placeholder."""
+"""Alembic environment configuration for schema migrations."""
+
+from __future__ import annotations
+
+import asyncio
+import os
+from logging.config import fileConfig
+
+from alembic import context
+from sqlalchemy import pool
+from sqlalchemy.engine import Connection
+from sqlalchemy.ext.asyncio import async_engine_from_config
+
+from app.db.models import booking as _booking_models
+from app.db.session import Base, DEFAULT_DATABASE_URL
+
+# Why: Alembic runs in separate process from app startup, so we explicitly
+# load model modules to guarantee metadata registration for autogenerate.
+_ = _booking_models
+
+config = context.config
+
+if config.config_file_name is not None:
+    fileConfig(config.config_file_name)
+
+# Why: keeping migration metadata anchored to the same Base prevents drift
+# between runtime ORM mapping and generated migration scripts.
+target_metadata = Base.metadata
+
+# Why: migrations should target environment-specific DB endpoints without
+# editing repository files, which keeps deploy pipelines reproducible.
+database_url = os.getenv("DATABASE_URL", DEFAULT_DATABASE_URL)
+config.set_main_option("sqlalchemy.url", database_url)
+
+
+def run_migrations_offline() -> None:
+    """Run migrations without DB connection."""
+    url = config.get_main_option("sqlalchemy.url")
+    context.configure(
+        url=url,
+        target_metadata=target_metadata,
+        literal_binds=True,
+        dialect_opts={"paramstyle": "named"},
+        compare_type=True,
+    )
+
+    with context.begin_transaction():
+        context.run_migrations()
+
+
+def _run_sync_migrations(connection: Connection) -> None:
+    # Why: centralizing context.configure in one sync callback ensures
+    # identical behavior for every async migration connection.
+    context.configure(
+        connection=connection,
+        target_metadata=target_metadata,
+        compare_type=True,
+    )
+
+    with context.begin_transaction():
+        context.run_migrations()
+
+
+async def run_migrations_online() -> None:
+    """Run migrations with live DB connection."""
+    connectable = async_engine_from_config(
+        config.get_section(config.config_ini_section, {}),
+        prefix="sqlalchemy.",
+        poolclass=pool.NullPool,
+    )
+
+    # Why: NullPool avoids cross-command connection reuse during deploy/CI,
+    # reducing hidden state between sequential migration invocations.
+    async with connectable.connect() as connection:
+        await connection.run_sync(_run_sync_migrations)
+
+    await connectable.dispose()
+
+
+if context.is_offline_mode():
+    run_migrations_offline()
+else:
+    asyncio.run(run_migrations_online())
