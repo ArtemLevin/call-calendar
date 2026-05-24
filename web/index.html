@@ -7,149 +7,64 @@
     <link rel="stylesheet" href="/web/styles.css" />
   </head>
   <body>
-    <header class="site-header">
-      <div class="shell header-inner">
-        <a class="logo" href="/" aria-label="Call Calendar Home">Call Calendar</a>
-        <button id="mobile-menu-toggle" class="mobile-menu-toggle" type="button" aria-expanded="false" aria-controls="primary-nav">
-          Menu
+    <main class="booking-page">
+      <section class="top-controls" aria-label="Display controls">
+        <button id="overlay-toggle" class="toggle" type="button" role="switch" aria-checked="true" aria-label="Overlay my calendar">
+          <span class="toggle-knob"></span>
         </button>
-        <nav id="primary-nav" class="primary-nav" aria-label="Primary navigation">
-          <a href="#product">Product</a>
-          <a href="#features">Features</a>
-          <a href="#developers">Developers</a>
-          <a href="#use-cases">Use cases</a>
-        </nav>
-        <div class="header-actions">
-          <button class="btn btn-secondary" type="button">Log in</button>
-          <button class="btn btn-primary" type="button">Get started</button>
-        </div>
-      </div>
-    </header>
+        <span class="control-label">Overlay my calendar</span>
+        <button class="icon-btn" type="button" aria-label="Settings">⚙</button>
+        <button class="icon-btn is-active" type="button" aria-label="Calendar view" data-view="calendar">📅</button>
+        <button class="icon-btn" type="button" aria-label="Grid view" data-view="grid">▦</button>
+        <button class="icon-btn" type="button" aria-label="Columns view" data-view="columns">☰</button>
+      </section>
 
-    <main>
-      <section class="hero shell" id="product">
-        <div class="hero-copy">
-          <p class="eyebrow">Scheduling infrastructure for teams</p>
-          <h1>Book meetings fast with a clean, API-first calendar flow.</h1>
-          <p class="subtitle">Call Calendar helps product and sales teams publish availability, embed booking in any stack, and stay reliable at scale.</p>
-          <div class="hero-cta">
-            <button class="btn btn-primary" type="button">Start for free</button>
-            <button class="btn btn-secondary" type="button">Book a demo</button>
+      <section class="booking-card" aria-label="Booking card">
+        <aside class="meeting-info">
+          <div class="organizer">
+            <div class="avatar" aria-hidden="true">K</div>
+            <p class="organizer-name">Kirill Mokevnin</p>
           </div>
-          <div class="badge-row">
-            <span class="badge">API-first</span>
-            <span class="badge">White-label ready</span>
-            <span class="badge">No auth overhead</span>
-          </div>
-        </div>
-        <aside class="hero-preview card" aria-label="Booking preview">
-          <h2>Live booking preview</h2>
-          <p>Share one link. Let customers pick a time instantly.</p>
-          <ul class="slot-list" aria-label="Available slots">
-            <li><button type="button">Mon · 10:00</button></li>
-            <li><button type="button">Mon · 10:30</button></li>
-            <li><button type="button">Mon · 11:00</button></li>
+          <h1>30 Min Meeting</h1>
+          <ul class="meeting-meta">
+            <li>🕒 30m</li>
+            <li>🎥 Google Meet</li>
+            <li>🌐 Asia/Yekaterinburg ▾</li>
           </ul>
-          <button class="btn btn-primary" type="button">Continue booking</button>
         </aside>
-      </section>
 
-      <section class="shell section" id="features">
-        <h2>Why teams choose Call Calendar</h2>
-        <div class="feature-grid">
-          <article class="card feature-card"><h3>Fast booking flow</h3><p>From slot selection to confirmation in a few focused steps.</p></article>
-          <article class="card feature-card"><h3>Flexible embeds</h3><p>Inline, modal, and floating widget patterns for any website.</p></article>
-          <article class="card feature-card"><h3>Developer-first API</h3><p>Simple contracts that map directly to your product workflows.</p></article>
-          <article class="card feature-card"><h3>White-label controls</h3><p>Keep your brand across booking pages and embedded experiences.</p></article>
-        </div>
-      </section>
-
-      <section class="shell section two-col" id="developers">
-        <div>
-          <h2>Built for developers</h2>
-          <p>Use REST endpoints, embed widgets, and keep booking logic inside your existing architecture.</p>
-          <button class="btn btn-secondary" type="button">View docs</button>
-        </div>
-        <pre class="code-block"><code>curl -X POST /api/bookings/ \
-  -H "Content-Type: application/json" \
-  -d '{
-    "slot_start": "2026-06-01T10:00:00",
-    "customer_name": "Alice",
-    "customer_email": "alice@example.com"
-  }'</code></pre>
-      </section>
-
-      <section class="shell section" id="use-cases">
-        <h2>Use cases</h2>
-        <div class="tabs" role="tablist" aria-label="Use cases tabs">
-          <button class="tab is-active" type="button" role="tab" aria-selected="true">Sales</button>
-          <button class="tab" type="button" role="tab" aria-selected="false">Recruiting</button>
-          <button class="tab" type="button" role="tab" aria-selected="false">Consulting</button>
-        </div>
-        <article class="card">
-          <h3>Sales teams</h3>
-          <p>Qualify inbound leads and route prospects to the right rep with minimal handoff delay.</p>
-        </article>
-      </section>
-
-      <section class="shell section booking-workspace" aria-label="Booking workspace">
-        <article class="card">
-          <h2>Create booking</h2>
-          <form id="booking-form">
-            <label>
-              Slot start (local datetime)
-              <input id="slot_start" type="datetime-local" required />
-            </label>
-            <label>
-              Customer name
-              <input id="customer_name" type="text" minlength="2" required />
-            </label>
-            <label>
-              Customer email
-              <input id="customer_email" type="email" required />
-            </label>
-            <button class="btn btn-primary" type="submit">Book slot</button>
-          </form>
-          <p id="create-result" class="result" aria-live="polite" role="status"></p>
-        </article>
-
-        <article class="card">
-          <h2>Upcoming bookings</h2>
-          <div class="controls-row">
-            <label>
-              Page size
-              <select id="page-size">
-                <option value="5">5</option>
-                <option value="10" selected>10</option>
-                <option value="20">20</option>
-              </select>
-            </label>
-            <button id="refresh-upcoming" class="btn btn-secondary" type="button">Refresh</button>
+        <section class="calendar-panel" aria-label="Calendar panel">
+          <header class="calendar-header">
+            <h2 id="month-label">April 2026</h2>
+            <div class="month-nav">
+              <button id="prev-month" type="button" aria-label="Previous month">‹</button>
+              <button id="next-month" type="button" aria-label="Next month">›</button>
+            </div>
+          </header>
+          <div class="weekdays" aria-hidden="true">
+            <span>MON</span><span>TUE</span><span>WED</span><span>THU</span><span>FRI</span><span>SAT</span><span>SUN</span>
           </div>
-          <div class="pagination-controls">
-            <button id="prev-page" class="btn btn-secondary" type="button">Previous</button>
-            <span id="page-info" aria-live="polite">Page 1</span>
-            <button id="next-page" class="btn btn-secondary" type="button">Next</button>
-          </div>
-          <p id="upcoming-error" class="result" aria-live="polite" role="alert"></p>
-          <ul id="upcoming-list"></ul>
-        </article>
+          <div id="calendar-grid" class="calendar-grid" role="grid" aria-label="April 2026 calendar"></div>
+        </section>
+
+        <section class="slots-panel" aria-label="Available time slots">
+          <header class="slots-header">
+            <h3 id="selected-date-label">Tue 07</h3>
+            <div class="format-toggle" role="group" aria-label="Time format">
+              <button id="format-12h" type="button" aria-pressed="false">12h</button>
+              <button id="format-24h" type="button" class="is-active" aria-pressed="true">24h</button>
+            </div>
+          </header>
+          <div id="slot-list" class="slot-list"></div>
+          <p id="slot-empty" class="slot-empty" hidden>No available times</p>
+        </section>
       </section>
 
-      <section class="shell section final-cta">
-        <h2>Ready to ship reliable scheduling?</h2>
-        <p>Launch in minutes, customize deeply, and keep your booking experience product-grade.</p>
-        <div class="hero-cta">
-          <button class="btn btn-primary" type="button">Start for free</button>
-          <button class="btn btn-secondary" type="button">View docs</button>
-        </div>
-      </section>
+      <p class="brand">Cal.com</p>
     </main>
 
     <script>
-      window.APP_CONFIG = {
-        API_BASE_URL: '/api',
-      };
+      window.APP_CONFIG = { API_BASE_URL: '/api' };
     </script>
     <script src="/web/app.js" type="module"></script>
   </body>

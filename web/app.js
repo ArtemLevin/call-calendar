@@ -1,199 +1,153 @@
+const overlayToggle = document.getElementById('overlay-toggle');
+const viewButtons = Array.from(document.querySelectorAll('.icon-btn[data-view]'));
+const monthLabel = document.getElementById('month-label');
+const prevMonth = document.getElementById('prev-month');
+const nextMonth = document.getElementById('next-month');
+const calendarGrid = document.getElementById('calendar-grid');
+const selectedDateLabel = document.getElementById('selected-date-label');
+const slotList = document.getElementById('slot-list');
+const slotEmpty = document.getElementById('slot-empty');
+const format12h = document.getElementById('format-12h');
+const format24h = document.getElementById('format-24h');
 
-const mobileMenuToggle = document.getElementById('mobile-menu-toggle');
-const primaryNav = document.getElementById('primary-nav');
+const availableSlots = {
+  '2026-04-07': ['21:00', '21:30', '22:00', '22:30', '23:00', '23:30'],
+  '2026-04-08': ['19:00', '19:30'],
+};
 
-if (mobileMenuToggle && primaryNav) {
-  mobileMenuToggle.addEventListener('click', () => {
-    const expanded = mobileMenuToggle.getAttribute('aria-expanded') === 'true';
-    mobileMenuToggle.setAttribute('aria-expanded', String(!expanded));
-    primaryNav.classList.toggle('is-open', !expanded);
-  });
+let currentMonth = new Date(2026, 3, 1);
+let selectedDate = '2026-04-07';
+let selectedTime = null;
+let timeFormat = '24h';
+
+function ymd(date) {
+  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
 }
 
-const config = window.APP_CONFIG ?? { API_BASE_URL: '/api' };
+function formatSlot(time24) {
+  if (timeFormat === '24h') return time24;
+  const [h, m] = time24.split(':').map(Number);
+  const suffix = h >= 12 ? 'PM' : 'AM';
+  const hour12 = ((h + 11) % 12) + 1;
+  return `${hour12}:${String(m).padStart(2, '0')} ${suffix}`;
+}
 
-const bookingForm = document.getElementById('booking-form');
-const createResult = document.getElementById('create-result');
-const upcomingList = document.getElementById('upcoming-list');
-const refreshButton = document.getElementById('refresh-upcoming');
-const pageSizeSelect = document.getElementById('page-size');
-const prevPageButton = document.getElementById('prev-page');
-const nextPageButton = document.getElementById('next-page');
-const pageInfo = document.getElementById('page-info');
-const slotStartInput = document.getElementById('slot_start');
-const upcomingError = document.getElementById('upcoming-error');
+function renderSlots() {
+  const slots = availableSlots[selectedDate] ?? [];
+  slotList.innerHTML = '';
+  slotEmpty.hidden = slots.length > 0;
 
-let pageSize = Number(pageSizeSelect.value);
-let currentPage = 0;
-let lastPageReached = false;
-let isLoading = false;
-
-function setMessageState(target, message, variant = "") {
-  target.textContent = message;
-  target.classList.remove('error', 'success');
-  if (variant) {
-    target.classList.add(variant);
+  for (const slot of slots) {
+    const btn = document.createElement('button');
+    btn.type = 'button';
+    btn.className = 'slot-button';
+    btn.setAttribute('aria-pressed', String(selectedTime === slot));
+    if (selectedTime === slot) btn.classList.add('selected');
+    btn.innerHTML = `<span class="slot-dot" aria-hidden="true"></span><span>${formatSlot(slot)}</span>`;
+    btn.addEventListener('click', () => {
+      selectedTime = slot;
+      renderSlots();
+    });
+    slotList.appendChild(btn);
   }
 }
 
-function formatErrorMessage(response, payload) {
-  if (response.status === 409) {
-    return payload?.detail ?? 'Slot is already booked.';
+function renderSelectedDateLabel() {
+  const d = new Date(`${selectedDate}T00:00:00`);
+  selectedDateLabel.textContent = d.toLocaleDateString('en-US', { weekday: 'short', day: '2-digit' });
+}
+
+function renderCalendar() {
+  const y = currentMonth.getFullYear();
+  const m = currentMonth.getMonth();
+  monthLabel.textContent = currentMonth.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
+
+  const first = new Date(y, m, 1);
+  const firstWeekdayMonBased = (first.getDay() + 6) % 7;
+  const daysInMonth = new Date(y, m + 1, 0).getDate();
+
+  calendarGrid.innerHTML = '';
+  for (let i = 0; i < firstWeekdayMonBased; i += 1) {
+    const blank = document.createElement('div');
+    calendarGrid.appendChild(blank);
   }
 
-  if (response.status === 422) {
-    return 'Invalid input. Please check datetime/email format.';
-  }
+  for (let day = 1; day <= daysInMonth; day += 1) {
+    const date = new Date(y, m, day);
+    const key = ymd(date);
+    const available = Object.hasOwn(availableSlots, key);
+    const btn = document.createElement('button');
+    btn.type = 'button';
+    btn.className = 'day-cell';
+    btn.textContent = String(day);
+    btn.setAttribute('role', 'gridcell');
+    btn.setAttribute('aria-selected', String(selectedDate === key));
+    if (available) btn.classList.add('available');
+    if (selectedDate === key) btn.classList.add('selected');
+    if (!available) btn.disabled = true;
 
-  return payload?.detail ?? `Unexpected error (${response.status})`;
-}
-
-function parseJsonSafe(response) {
-  return response
-    .json()
-    .catch(() => ({ detail: 'Server returned an unreadable response.' }));
-}
-
-function toApiLocalNaiveDateTime(value) {
-  if (!value) {
-    return '';
-  }
-
-  // Why: backend persists naive datetime values, so we keep local wall-clock
-  // format without timezone suffix to avoid accidental client-side UTC shifts.
-  return `${value}:00`;
-}
-
-function updatePaginationControls(resultCount) {
-  pageInfo.textContent = `Page ${currentPage + 1}`;
-  prevPageButton.disabled = currentPage === 0;
-  nextPageButton.disabled = resultCount < pageSize || lastPageReached;
-}
-
-function setLoadingState(loading) {
-  isLoading = loading;
-  bookingForm.querySelector('button[type="submit"]').disabled = loading;
-  refreshButton.disabled = loading;
-  pageSizeSelect.disabled = loading;
-  prevPageButton.disabled = loading || currentPage === 0;
-  nextPageButton.disabled = loading || nextPageButton.disabled;
-}
-
-async function loadUpcoming() {
-  setLoadingState(true);
-  upcomingError.textContent = '';
-  const offset = currentPage * pageSize;
-  const fromTs = toApiLocalNaiveDateTime(slotStartInput.value) || new Date().toISOString().slice(0, 19);
-  const url = `${config.API_BASE_URL}/bookings/upcoming?from_ts=${encodeURIComponent(fromTs)}&limit=${pageSize}&offset=${offset}`;
-  try {
-    const response = await fetch(url);
-    const payload = await parseJsonSafe(response);
-
-    if (!response.ok) {
-      throw new Error(formatErrorMessage(response, payload));
-    }
-
-    upcomingList.innerHTML = '';
-    for (const booking of payload) {
-      const item = document.createElement('li');
-      item.textContent = `${booking.slot_start} — ${booking.customer_name} (${booking.customer_email})`;
-      upcomingList.appendChild(item);
-    }
-
-    lastPageReached = payload.length < pageSize;
-    updatePaginationControls(payload.length);
-  } finally {
-    // Why: centralized loading teardown prevents disabled controls from getting
-    // stuck when any network branch throws before normal completion.
-    setLoadingState(false);
-  }
-}
-
-bookingForm.addEventListener('submit', async (event) => {
-  event.preventDefault();
-
-  const body = {
-    slot_start: toApiLocalNaiveDateTime(slotStartInput.value),
-    customer_name: document.getElementById('customer_name').value,
-    customer_email: document.getElementById('customer_email').value,
-  };
-
-  setMessageState(createResult, '');
-
-  try {
-    setLoadingState(true);
-    const response = await fetch(`${config.API_BASE_URL}/bookings/`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(body),
+    btn.addEventListener('click', () => {
+      selectedDate = key;
+      selectedTime = null;
+      renderCalendar();
+      renderSelectedDateLabel();
+      renderSlots();
     });
 
-    const payload = await parseJsonSafe(response);
-    if (!response.ok) {
-      setMessageState(createResult, formatErrorMessage(response, payload), 'error');
-      return;
-    }
-
-    // Why: reloading page 1 after successful create keeps pagination stable and
-    // surfaces the new slot according to backend sorting rules.
-    currentPage = 0;
-    setMessageState(createResult, `Booking #${payload.id} created.`, 'success');
-    await loadUpcoming();
-  } catch (_error) {
-    setMessageState(createResult, 'Network error. Please retry.', 'error');
-  } finally {
-    setLoadingState(false);
+    calendarGrid.appendChild(btn);
   }
+}
+
+overlayToggle?.addEventListener('click', () => {
+  const on = overlayToggle.getAttribute('aria-checked') === 'true';
+  overlayToggle.setAttribute('aria-checked', String(!on));
 });
 
-refreshButton.addEventListener('click', async () => {
-  if (isLoading) {
-    return;
-  }
-  try {
-    await loadUpcoming();
-  } catch (error) {
-    setMessageState(upcomingError, error.message, 'error');
-  }
+viewButtons.forEach((btn) => {
+  btn.addEventListener('click', () => {
+    viewButtons.forEach((item) => item.classList.remove('is-active'));
+    btn.classList.add('is-active');
+  });
 });
 
-pageSizeSelect.addEventListener('change', async () => {
-  pageSize = Number(pageSizeSelect.value);
-  currentPage = 0;
-
-  try {
-    await loadUpcoming();
-  } catch (error) {
-    setMessageState(upcomingError, error.message, 'error');
-  }
+prevMonth?.addEventListener('click', () => {
+  currentMonth = new Date(currentMonth.getFullYear(), currentMonth.getMonth() - 1, 1);
+  const inMonth = selectedDate.startsWith(`${currentMonth.getFullYear()}-${String(currentMonth.getMonth() + 1).padStart(2, '0')}-`);
+  if (!inMonth) selectedDate = ymd(new Date(currentMonth.getFullYear(), currentMonth.getMonth(), 1));
+  selectedTime = null;
+  renderCalendar();
+  renderSelectedDateLabel();
+  renderSlots();
 });
 
-prevPageButton.addEventListener('click', async () => {
-  if (currentPage === 0) {
-    return;
-  }
-
-  currentPage -= 1;
-  try {
-    await loadUpcoming();
-  } catch (error) {
-    setMessageState(upcomingError, error.message, 'error');
-  }
+nextMonth?.addEventListener('click', () => {
+  currentMonth = new Date(currentMonth.getFullYear(), currentMonth.getMonth() + 1, 1);
+  const inMonth = selectedDate.startsWith(`${currentMonth.getFullYear()}-${String(currentMonth.getMonth() + 1).padStart(2, '0')}-`);
+  if (!inMonth) selectedDate = ymd(new Date(currentMonth.getFullYear(), currentMonth.getMonth(), 1));
+  selectedTime = null;
+  renderCalendar();
+  renderSelectedDateLabel();
+  renderSlots();
 });
 
-nextPageButton.addEventListener('click', async () => {
-  if (lastPageReached) {
-    return;
-  }
-
-  currentPage += 1;
-  try {
-    await loadUpcoming();
-  } catch (error) {
-    setMessageState(upcomingError, error.message, 'error');
-  }
+format12h?.addEventListener('click', () => {
+  timeFormat = '12h';
+  format12h.classList.add('is-active');
+  format24h.classList.remove('is-active');
+  format12h.setAttribute('aria-pressed', 'true');
+  format24h.setAttribute('aria-pressed', 'false');
+  renderSlots();
 });
 
-loadUpcoming().catch((error) => {
-  upcomingError.textContent = error.message;
+format24h?.addEventListener('click', () => {
+  timeFormat = '24h';
+  format24h.classList.add('is-active');
+  format12h.classList.remove('is-active');
+  format24h.setAttribute('aria-pressed', 'true');
+  format12h.setAttribute('aria-pressed', 'false');
+  renderSlots();
 });
+
+renderCalendar();
+renderSelectedDateLabel();
+renderSlots();
