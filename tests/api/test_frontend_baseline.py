@@ -14,6 +14,7 @@ def test_root_serves_frontend_entrypoint() -> None:
     assert 'class="booking-card"' in response.text
     assert 'id="calendar-grid"' in response.text
     assert 'id="slot-list"' in response.text
+    assert 'id="booking-form"' in response.text
 
 
 def test_web_assets_are_served() -> None:

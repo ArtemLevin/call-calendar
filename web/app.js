@@ -1,3 +1,5 @@
+const config = window.APP_CONFIG ?? { API_BASE_URL: '/api' };
+
 const overlayToggle = document.getElementById('overlay-toggle');
 const viewButtons = Array.from(document.querySelectorAll('.icon-btn[data-view]'));
 const monthLabel = document.getElementById('month-label');
@@ -9,19 +11,27 @@ const slotList = document.getElementById('slot-list');
 const slotEmpty = document.getElementById('slot-empty');
 const format12h = document.getElementById('format-12h');
 const format24h = document.getElementById('format-24h');
+const bookingForm = document.getElementById('booking-form');
+const bookingResult = document.getElementById('booking-result');
 
-const availableSlots = {
-  '2026-04-07': ['21:00', '21:30', '22:00', '22:30', '23:00', '23:30'],
-  '2026-04-08': ['19:00', '19:30'],
-};
-
-let currentMonth = new Date(2026, 3, 1);
-let selectedDate = '2026-04-07';
+let currentMonth = new Date();
+let selectedDate = null;
 let selectedTime = null;
 let timeFormat = '24h';
+let availableSlots = {};
 
 function ymd(date) {
   return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
+}
+
+function parseJsonSafe(response) {
+  return response.json().catch(() => ({ detail: 'Unreadable server response.' }));
+}
+
+function formatErrorMessage(response, payload) {
+  if (response.status === 409) return payload?.detail ?? 'Slot is already booked.';
+  if (response.status === 422) return 'Invalid data. Check selected slot, name, and email.';
+  return payload?.detail ?? `Unexpected error (${response.status})`;
 }
 
 function formatSlot(time24) {
@@ -32,8 +42,12 @@ function formatSlot(time24) {
   return `${hour12}:${String(m).padStart(2, '0')} ${suffix}`;
 }
 
+function slotsForDate(dateKey) {
+  return availableSlots[dateKey] ?? [];
+}
+
 function renderSlots() {
-  const slots = availableSlots[selectedDate] ?? [];
+  const slots = selectedDate ? slotsForDate(selectedDate) : [];
   slotList.innerHTML = '';
   slotEmpty.hidden = slots.length > 0;
 
@@ -53,6 +67,10 @@ function renderSlots() {
 }
 
 function renderSelectedDateLabel() {
+  if (!selectedDate) {
+    selectedDateLabel.textContent = 'Select date';
+    return;
+  }
   const d = new Date(`${selectedDate}T00:00:00`);
   selectedDateLabel.textContent = d.toLocaleDateString('en-US', { weekday: 'short', day: '2-digit' });
 }
@@ -68,23 +86,22 @@ function renderCalendar() {
 
   calendarGrid.innerHTML = '';
   for (let i = 0; i < firstWeekdayMonBased; i += 1) {
-    const blank = document.createElement('div');
-    calendarGrid.appendChild(blank);
+    calendarGrid.appendChild(document.createElement('div'));
   }
 
   for (let day = 1; day <= daysInMonth; day += 1) {
     const date = new Date(y, m, day);
     const key = ymd(date);
-    const available = Object.hasOwn(availableSlots, key);
+    const slots = slotsForDate(key);
     const btn = document.createElement('button');
     btn.type = 'button';
     btn.className = 'day-cell';
     btn.textContent = String(day);
     btn.setAttribute('role', 'gridcell');
     btn.setAttribute('aria-selected', String(selectedDate === key));
-    if (available) btn.classList.add('available');
+    if (slots.length > 0) btn.classList.add('available');
     if (selectedDate === key) btn.classList.add('selected');
-    if (!available) btn.disabled = true;
+    if (slots.length === 0) btn.disabled = true;
 
     btn.addEventListener('click', () => {
       selectedDate = key;
@@ -98,6 +115,76 @@ function renderCalendar() {
   }
 }
 
+function toIsoLocal(slotDate, slotTime) {
+  return `${slotDate}T${slotTime}:00`;
+}
+
+async function loadUpcoming() {
+  const fromTs = new Date(currentMonth.getFullYear(), currentMonth.getMonth(), 1).toISOString().slice(0, 19);
+  const response = await fetch(`${config.API_BASE_URL}/bookings/upcoming?from_ts=${encodeURIComponent(fromTs)}&limit=100&offset=0`);
+  const payload = await parseJsonSafe(response);
+  if (!response.ok) {
+    throw new Error(formatErrorMessage(response, payload));
+  }
+
+  availableSlots = {};
+  for (const booking of payload) {
+    const [datePart, timePart] = booking.slot_start.split('T');
+    const slotTime = (timePart ?? '').slice(0, 5);
+    if (!slotTime) continue;
+    if (!availableSlots[datePart]) {
+      availableSlots[datePart] = [];
+    }
+    if (!availableSlots[datePart].includes(slotTime)) {
+      availableSlots[datePart].push(slotTime);
+    }
+  }
+
+  for (const dateKey of Object.keys(availableSlots)) {
+    availableSlots[dateKey].sort();
+  }
+
+  const firstDate = Object.keys(availableSlots).sort()[0] ?? null;
+  if (selectedDate === null || !availableSlots[selectedDate]) {
+    selectedDate = firstDate;
+    selectedTime = null;
+  }
+
+  renderCalendar();
+  renderSelectedDateLabel();
+  renderSlots();
+}
+
+bookingForm?.addEventListener('submit', async (event) => {
+  event.preventDefault();
+  bookingResult.textContent = '';
+  if (!selectedDate || !selectedTime) {
+    bookingResult.textContent = 'Select date and time first.';
+    return;
+  }
+
+  const body = {
+    slot_start: toIsoLocal(selectedDate, selectedTime),
+    customer_name: document.getElementById('customer_name').value,
+    customer_email: document.getElementById('customer_email').value,
+  };
+
+  const response = await fetch(`${config.API_BASE_URL}/bookings/`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(body),
+  });
+  const payload = await parseJsonSafe(response);
+
+  if (!response.ok) {
+    bookingResult.textContent = formatErrorMessage(response, payload);
+    return;
+  }
+
+  bookingResult.textContent = `Booking #${payload.id} created.`;
+  await loadUpcoming();
+});
+
 overlayToggle?.addEventListener('click', () => {
   const on = overlayToggle.getAttribute('aria-checked') === 'true';
   overlayToggle.setAttribute('aria-checked', String(!on));
@@ -110,24 +197,14 @@ viewButtons.forEach((btn) => {
   });
 });
 
-prevMonth?.addEventListener('click', () => {
+prevMonth?.addEventListener('click', async () => {
   currentMonth = new Date(currentMonth.getFullYear(), currentMonth.getMonth() - 1, 1);
-  const inMonth = selectedDate.startsWith(`${currentMonth.getFullYear()}-${String(currentMonth.getMonth() + 1).padStart(2, '0')}-`);
-  if (!inMonth) selectedDate = ymd(new Date(currentMonth.getFullYear(), currentMonth.getMonth(), 1));
-  selectedTime = null;
-  renderCalendar();
-  renderSelectedDateLabel();
-  renderSlots();
+  await loadUpcoming();
 });
 
-nextMonth?.addEventListener('click', () => {
+nextMonth?.addEventListener('click', async () => {
   currentMonth = new Date(currentMonth.getFullYear(), currentMonth.getMonth() + 1, 1);
-  const inMonth = selectedDate.startsWith(`${currentMonth.getFullYear()}-${String(currentMonth.getMonth() + 1).padStart(2, '0')}-`);
-  if (!inMonth) selectedDate = ymd(new Date(currentMonth.getFullYear(), currentMonth.getMonth(), 1));
-  selectedTime = null;
-  renderCalendar();
-  renderSelectedDateLabel();
-  renderSlots();
+  await loadUpcoming();
 });
 
 format12h?.addEventListener('click', () => {
@@ -145,6 +222,13 @@ format24h?.addEventListener('click', () => {
   format12h.classList.remove('is-active');
   format24h.setAttribute('aria-pressed', 'true');
   format12h.setAttribute('aria-pressed', 'false');
+  renderSlots();
+});
+
+loadUpcoming().catch((error) => {
+  bookingResult.textContent = error.message;
+  renderCalendar();
+  renderSelectedDateLabel();
   renderSlots();
 });
 
