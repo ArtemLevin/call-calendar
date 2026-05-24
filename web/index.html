@@ -8,8 +8,13 @@
   </head>
   <body>
     <main class="container">
-      <h1>Call Calendar</h1>
-      <section>
+      <header>
+        <h1>Call Calendar</h1>
+        <p class="subtitle">Minimal scheduling with a polished cal.com-inspired look.</p>
+      </header>
+
+      <div class="grid">
+        <section class="card">
         <h2>Create booking</h2>
         <form id="booking-form">
           <label>
@@ -26,12 +31,14 @@
           </label>
           <button type="submit">Book slot</button>
         </form>
-        <p id="create-result" aria-live="polite" role="status"></p>
+        <p id="create-result" class="result" aria-live="polite" role="status"></p>
       </section>
 
-      <section>
-        <h2>Upcoming bookings</h2>
-        <label>
+
+        <section class="card">
+          <h2>Upcoming bookings</h2>
+          <div class="controls-row">
+          <label>
           Page size
           <select id="page-size">
             <option value="5">5</option>
@@ -39,15 +46,17 @@
             <option value="20">20</option>
           </select>
         </label>
-        <div class="pagination-controls">
+          <button id="refresh-upcoming" class="ghost" type="button">Refresh</button>
+        </div>
+          <div class="pagination-controls">
           <button id="prev-page" type="button">Previous</button>
           <span id="page-info" aria-live="polite">Page 1</span>
           <button id="next-page" type="button">Next</button>
         </div>
-        <button id="refresh-upcoming" type="button">Refresh</button>
-        <p id="upcoming-error" aria-live="polite" role="alert"></p>
-        <ul id="upcoming-list"></ul>
-      </section>
+          <p id="upcoming-error" class="result" aria-live="polite" role="alert"></p>
+          <ul id="upcoming-list"></ul>
+        </section>
+      </div>
     </main>
 
     <script>

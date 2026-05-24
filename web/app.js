@@ -16,6 +16,14 @@ let currentPage = 0;
 let lastPageReached = false;
 let isLoading = false;
 
+function setMessageState(target, message, variant = "") {
+  target.textContent = message;
+  target.classList.remove('error', 'success');
+  if (variant) {
+    target.classList.add(variant);
+  }
+}
+
 function formatErrorMessage(response, payload) {
   if (response.status === 409) {
     return payload?.detail ?? 'Slot is already booked.';
@@ -98,7 +106,7 @@ bookingForm.addEventListener('submit', async (event) => {
     customer_email: document.getElementById('customer_email').value,
   };
 
-  createResult.textContent = '';
+  setMessageState(createResult, '');
 
   try {
     setLoadingState(true);
@@ -110,17 +118,17 @@ bookingForm.addEventListener('submit', async (event) => {
 
     const payload = await parseJsonSafe(response);
     if (!response.ok) {
-      createResult.textContent = formatErrorMessage(response, payload);
+      setMessageState(createResult, formatErrorMessage(response, payload), 'error');
       return;
     }
 
     // Why: reloading page 1 after successful create keeps pagination stable and
     // surfaces the new slot according to backend sorting rules.
     currentPage = 0;
-    createResult.textContent = `Booking #${payload.id} created.`;
+    setMessageState(createResult, `Booking #${payload.id} created.`, 'success');
     await loadUpcoming();
   } catch (_error) {
-    createResult.textContent = 'Network error. Please retry.';
+    setMessageState(createResult, 'Network error. Please retry.', 'error');
   } finally {
     setLoadingState(false);
   }
@@ -133,7 +141,7 @@ refreshButton.addEventListener('click', async () => {
   try {
     await loadUpcoming();
   } catch (error) {
-    upcomingError.textContent = error.message;
+    setMessageState(upcomingError, error.message, 'error');
   }
 });
 
@@ -144,7 +152,7 @@ pageSizeSelect.addEventListener('change', async () => {
   try {
     await loadUpcoming();
   } catch (error) {
-    upcomingError.textContent = error.message;
+    setMessageState(upcomingError, error.message, 'error');
   }
 });
 
@@ -157,7 +165,7 @@ prevPageButton.addEventListener('click', async () => {
   try {
     await loadUpcoming();
   } catch (error) {
-    upcomingError.textContent = error.message;
+    setMessageState(upcomingError, error.message, 'error');
   }
 });
 
@@ -170,7 +178,7 @@ nextPageButton.addEventListener('click', async () => {
   try {
     await loadUpcoming();
   } catch (error) {
-    upcomingError.textContent = error.message;
+    setMessageState(upcomingError, error.message, 'error');
   }
 });
 
