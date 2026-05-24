@@ -13,8 +13,8 @@
         <h2>Create booking</h2>
         <form id="booking-form">
           <label>
-            Slot start (ISO datetime)
-            <input id="slot_start" type="text" placeholder="2026-06-01T10:00:00" required />
+            Slot start (local datetime)
+            <input id="slot_start" type="datetime-local" required />
           </label>
           <label>
             Customer name
@@ -31,6 +31,19 @@
 
       <section>
         <h2>Upcoming bookings</h2>
+        <label>
+          Page size
+          <select id="page-size">
+            <option value="5">5</option>
+            <option value="10" selected>10</option>
+            <option value="20">20</option>
+          </select>
+        </label>
+        <div class="pagination-controls">
+          <button id="prev-page" type="button">Previous</button>
+          <span id="page-info" aria-live="polite">Page 1</span>
+          <button id="next-page" type="button">Next</button>
+        </div>
         <button id="refresh-upcoming" type="button">Refresh</button>
         <ul id="upcoming-list"></ul>
       </section>
