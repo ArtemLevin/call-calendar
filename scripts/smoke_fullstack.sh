@@ -2,6 +2,9 @@
 set -euo pipefail
 
 BASE_URL="${BASE_URL:-http://localhost:8000}"
+ROOT_BUDGET_MS="${ROOT_BUDGET_MS:-1500}"
+CREATE_BUDGET_MS="${CREATE_BUDGET_MS:-2000}"
+UPCOMING_BUDGET_MS="${UPCOMING_BUDGET_MS:-2000}"
 
 cleanup() {
   docker compose down >/dev/null 2>&1 || true
@@ -23,7 +26,16 @@ for attempt in $(seq 1 30); do
   fi
 done
 
-curl -fsS "$BASE_URL/" >/dev/null
+root_ms=$(curl -s -o /dev/null -w "%{time_total}" "$BASE_URL/")
+root_ms=$(python3 - <<PY
+print(int(float("$root_ms") * 1000))
+PY
+)
+if (( root_ms > ROOT_BUDGET_MS )); then
+  echo "Root page exceeded budget: ${root_ms}ms > ${ROOT_BUDGET_MS}ms" >&2
+  exit 1
+fi
+
 curl -fsS "$BASE_URL/web/app.js" >/dev/null
 
 SLOT_START="2026-06-01T10:00:00"
@@ -32,6 +44,17 @@ PAYLOAD="{\"slot_start\":\"$SLOT_START\",\"customer_name\":\"Smoke User\",\"cust
 create_code=$(curl -s -o /tmp/create_response.json -w "%{http_code}" -X POST "$BASE_URL/api/bookings/" \
   -H "Content-Type: application/json" \
   -d "$PAYLOAD")
+create_ms=$(curl -s -o /dev/null -w "%{time_total}" -X POST "$BASE_URL/api/bookings/" \
+  -H "Content-Type: application/json" \
+  -d "{\"slot_start\":\"2026-06-01T11:00:00\",\"customer_name\":\"Budget User\",\"customer_email\":\"budget@example.com\"}")
+create_ms=$(python3 - <<PY
+print(int(float("$create_ms") * 1000))
+PY
+)
+if (( create_ms > CREATE_BUDGET_MS )); then
+  echo "Create request exceeded budget: ${create_ms}ms > ${CREATE_BUDGET_MS}ms" >&2
+  exit 1
+fi
 
 if [[ "$create_code" != "201" ]]; then
   echo "Create booking expected 201, got $create_code" >&2
@@ -51,6 +74,16 @@ fi
 
 upcoming_code=$(curl -s -o /tmp/upcoming_response.json -w "%{http_code}" \
   "$BASE_URL/api/bookings/upcoming?from_ts=2026-06-01T00:00:00&limit=10&offset=0")
+upcoming_ms=$(curl -s -o /dev/null -w "%{time_total}" \
+  "$BASE_URL/api/bookings/upcoming?from_ts=2026-06-01T00:00:00&limit=10&offset=0")
+upcoming_ms=$(python3 - <<PY
+print(int(float("$upcoming_ms") * 1000))
+PY
+)
+if (( upcoming_ms > UPCOMING_BUDGET_MS )); then
+  echo "Upcoming request exceeded budget: ${upcoming_ms}ms > ${UPCOMING_BUDGET_MS}ms" >&2
+  exit 1
+fi
 
 if [[ "$upcoming_code" != "200" ]]; then
   echo "Upcoming expected 200, got $upcoming_code" >&2

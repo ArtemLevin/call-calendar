@@ -26,7 +26,7 @@
           </label>
           <button type="submit">Book slot</button>
         </form>
-        <p id="create-result" aria-live="polite"></p>
+        <p id="create-result" aria-live="polite" role="status"></p>
       </section>
 
       <section>
@@ -45,6 +45,7 @@
           <button id="next-page" type="button">Next</button>
         </div>
         <button id="refresh-upcoming" type="button">Refresh</button>
+        <p id="upcoming-error" aria-live="polite" role="alert"></p>
         <ul id="upcoming-list"></ul>
       </section>
     </main>

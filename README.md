@@ -73,3 +73,8 @@ The smoke verifies:
 - booking create success (`201`);
 - duplicate-slot conflict (`409`);
 - upcoming listing (`200`) with non-empty response.
+
+Performance budgets used by smoke defaults:
+- root page: 1500ms;
+- create request: 2000ms;
+- upcoming request: 2000ms.

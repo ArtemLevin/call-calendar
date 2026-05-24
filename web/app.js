@@ -9,10 +9,12 @@ const prevPageButton = document.getElementById('prev-page');
 const nextPageButton = document.getElementById('next-page');
 const pageInfo = document.getElementById('page-info');
 const slotStartInput = document.getElementById('slot_start');
+const upcomingError = document.getElementById('upcoming-error');
 
 let pageSize = Number(pageSizeSelect.value);
 let currentPage = 0;
 let lastPageReached = false;
+let isLoading = false;
 
 function formatErrorMessage(response, payload) {
   if (response.status === 409) {
@@ -48,26 +50,43 @@ function updatePaginationControls(resultCount) {
   nextPageButton.disabled = resultCount < pageSize || lastPageReached;
 }
 
+function setLoadingState(loading) {
+  isLoading = loading;
+  bookingForm.querySelector('button[type="submit"]').disabled = loading;
+  refreshButton.disabled = loading;
+  pageSizeSelect.disabled = loading;
+  prevPageButton.disabled = loading || currentPage === 0;
+  nextPageButton.disabled = loading || nextPageButton.disabled;
+}
+
 async function loadUpcoming() {
+  setLoadingState(true);
+  upcomingError.textContent = '';
   const offset = currentPage * pageSize;
   const fromTs = toApiLocalNaiveDateTime(slotStartInput.value) || new Date().toISOString().slice(0, 19);
   const url = `${config.API_BASE_URL}/bookings/upcoming?from_ts=${encodeURIComponent(fromTs)}&limit=${pageSize}&offset=${offset}`;
-  const response = await fetch(url);
-  const payload = await parseJsonSafe(response);
+  try {
+    const response = await fetch(url);
+    const payload = await parseJsonSafe(response);
 
-  if (!response.ok) {
-    throw new Error(formatErrorMessage(response, payload));
+    if (!response.ok) {
+      throw new Error(formatErrorMessage(response, payload));
+    }
+
+    upcomingList.innerHTML = '';
+    for (const booking of payload) {
+      const item = document.createElement('li');
+      item.textContent = `${booking.slot_start} — ${booking.customer_name} (${booking.customer_email})`;
+      upcomingList.appendChild(item);
+    }
+
+    lastPageReached = payload.length < pageSize;
+    updatePaginationControls(payload.length);
+  } finally {
+    // Why: centralized loading teardown prevents disabled controls from getting
+    // stuck when any network branch throws before normal completion.
+    setLoadingState(false);
   }
-
-  upcomingList.innerHTML = '';
-  for (const booking of payload) {
-    const item = document.createElement('li');
-    item.textContent = `${booking.slot_start} — ${booking.customer_name} (${booking.customer_email})`;
-    upcomingList.appendChild(item);
-  }
-
-  lastPageReached = payload.length < pageSize;
-  updatePaginationControls(payload.length);
 }
 
 bookingForm.addEventListener('submit', async (event) => {
@@ -82,6 +101,7 @@ bookingForm.addEventListener('submit', async (event) => {
   createResult.textContent = '';
 
   try {
+    setLoadingState(true);
     const response = await fetch(`${config.API_BASE_URL}/bookings/`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -101,14 +121,19 @@ bookingForm.addEventListener('submit', async (event) => {
     await loadUpcoming();
   } catch (_error) {
     createResult.textContent = 'Network error. Please retry.';
+  } finally {
+    setLoadingState(false);
   }
 });
 
 refreshButton.addEventListener('click', async () => {
+  if (isLoading) {
+    return;
+  }
   try {
     await loadUpcoming();
   } catch (error) {
-    createResult.textContent = error.message;
+    upcomingError.textContent = error.message;
   }
 });
 
@@ -119,7 +144,7 @@ pageSizeSelect.addEventListener('change', async () => {
   try {
     await loadUpcoming();
   } catch (error) {
-    createResult.textContent = error.message;
+    upcomingError.textContent = error.message;
   }
 });
 
@@ -132,7 +157,7 @@ prevPageButton.addEventListener('click', async () => {
   try {
     await loadUpcoming();
   } catch (error) {
-    createResult.textContent = error.message;
+    upcomingError.textContent = error.message;
   }
 });
 
@@ -145,10 +170,10 @@ nextPageButton.addEventListener('click', async () => {
   try {
     await loadUpcoming();
   } catch (error) {
-    createResult.textContent = error.message;
+    upcomingError.textContent = error.message;
   }
 });
 
 loadUpcoming().catch((error) => {
-  createResult.textContent = error.message;
+  upcomingError.textContent = error.message;
 });
