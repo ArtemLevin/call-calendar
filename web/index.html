@@ -1,0 +1,59 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Call Calendar</title>
+    <link rel="stylesheet" href="/web/styles.css" />
+  </head>
+  <body>
+    <main class="container">
+      <h1>Call Calendar</h1>
+      <section>
+        <h2>Create booking</h2>
+        <form id="booking-form">
+          <label>
+            Slot start (local datetime)
+            <input id="slot_start" type="datetime-local" required />
+          </label>
+          <label>
+            Customer name
+            <input id="customer_name" type="text" minlength="2" required />
+          </label>
+          <label>
+            Customer email
+            <input id="customer_email" type="email" required />
+          </label>
+          <button type="submit">Book slot</button>
+        </form>
+        <p id="create-result" aria-live="polite"></p>
+      </section>
+
+      <section>
+        <h2>Upcoming bookings</h2>
+        <label>
+          Page size
+          <select id="page-size">
+            <option value="5">5</option>
+            <option value="10" selected>10</option>
+            <option value="20">20</option>
+          </select>
+        </label>
+        <div class="pagination-controls">
+          <button id="prev-page" type="button">Previous</button>
+          <span id="page-info" aria-live="polite">Page 1</span>
+          <button id="next-page" type="button">Next</button>
+        </div>
+        <button id="refresh-upcoming" type="button">Refresh</button>
+        <ul id="upcoming-list"></ul>
+      </section>
+    </main>
+
+    <script>
+      window.APP_CONFIG = {
+        API_BASE_URL: '/api',
+      };
+    </script>
+    <script src="/web/app.js" type="module"></script>
+  </body>
+</html>
