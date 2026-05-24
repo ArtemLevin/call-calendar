@@ -47,3 +47,13 @@ make setup-wheelhouse
 ```bash
 make test-ci-wheelhouse
 ```
+
+## Docker run
+
+```bash
+docker compose up --build
+```
+
+API will be available at `http://localhost:8000` and SQLite data persists in the `sqlite_data` volume.
+
+Frontend baseline is served from the same app at `http://localhost:8000/`.

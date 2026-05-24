@@ -1,0 +1,17 @@
+services:
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - "8000:8000"
+    environment:
+      # Why: DB path is mounted to a named volume so container restarts keep
+      # persisted bookings and migration state.
+      DATABASE_URL: sqlite+aiosqlite:////data/call_calendar.db
+    volumes:
+      - sqlite_data:/data
+    restart: unless-stopped
+
+volumes:
+  sqlite_data:
