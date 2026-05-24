@@ -47,3 +47,34 @@ make setup-wheelhouse
 ```bash
 make test-ci-wheelhouse
 ```
+
+## Docker run
+
+```bash
+docker compose up --build
+```
+
+API will be available at `http://localhost:8000` and SQLite data persists in the `sqlite_data` volume.
+
+Frontend baseline is served from the same app at `http://localhost:8000/`.
+Use the browser UI to create bookings, inspect 409/422 error handling, and page through upcoming bookings.
+
+## Full-stack smoke check
+
+Run a repeatable integration smoke that validates compose startup and key user/API flows:
+
+```bash
+make smoke-fullstack
+```
+
+The smoke verifies:
+- stack health (`/health`);
+- frontend entrypoint and JS asset (`/`, `/web/app.js`);
+- booking create success (`201`);
+- duplicate-slot conflict (`409`);
+- upcoming listing (`200`) with non-empty response.
+
+Performance budgets used by smoke defaults:
+- root page: 1500ms;
+- create request: 2000ms;
+- upcoming request: 2000ms.
