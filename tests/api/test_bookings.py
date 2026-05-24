@@ -121,3 +121,30 @@ def test_create_booking_accepts_timezone_aware_slot_start(client: TestClient) ->
     )
 
     assert response.status_code == 201
+
+
+def test_upcoming_contains_booked_slots_not_free_slots(client: TestClient) -> None:
+    payload = {
+        "slot_start": datetime(2026, 1, 3, 10, 0).isoformat(),
+        "customer_name": "Booked",
+        "customer_email": "booked@example.com",
+    }
+    created = client.post("/api/bookings/", json=payload)
+    assert created.status_code == 201
+
+    upcoming = client.get(
+        "/api/bookings/upcoming",
+        params={"from_ts": datetime(2026, 1, 3, 0, 0).isoformat(), "limit": 10, "offset": 0},
+    )
+    assert upcoming.status_code == 200
+    first_slot = upcoming.json()[0]["slot_start"]
+
+    conflict = client.post(
+        "/api/bookings/",
+        json={
+            "slot_start": first_slot,
+            "customer_name": "Duplicate",
+            "customer_email": "duplicate@example.com",
+        },
+    )
+    assert conflict.status_code == 409
