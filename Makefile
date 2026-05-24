@@ -1,7 +1,7 @@
 # Booking Calendar Service - Development Commands
 # ================================================
 
-.PHONY: setup setup-mirror setup-wheelhouse build-wheelhouse dev test lint typecheck migrate coverage clean help test-ci-mirror test-ci-wheelhouse
+.PHONY: setup setup-mirror setup-wheelhouse build-wheelhouse dev test lint typecheck migrate coverage clean help test-ci-mirror test-ci-wheelhouse smoke-fullstack
 
 # Configuration
 PYTHON := python3
@@ -205,3 +205,8 @@ test-ci-wheelhouse: ## Install from local wheelhouse and run tests/lint/typechec
 	. .venv/bin/activate && $(PYTEST) tests/ -v
 	. .venv/bin/activate && $(RUFF) check app/ tests/
 	. .venv/bin/activate && $(MYPY) app/ --strict
+
+
+smoke-fullstack: ## Run docker-compose full-stack smoke checks (health + UI + API happy/conflict/upcoming)
+	@echo "Running full-stack smoke checks..."
+	./scripts/smoke_fullstack.sh
