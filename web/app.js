@@ -231,3 +231,7 @@ loadUpcoming().catch((error) => {
   renderSelectedDateLabel();
   renderSlots();
 });
+
+renderCalendar();
+renderSelectedDateLabel();
+renderSlots();
