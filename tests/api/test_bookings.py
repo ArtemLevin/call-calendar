@@ -36,6 +36,14 @@ def test_create_booking_success(client: TestClient) -> None:
     body = response.json()
     assert body["id"] >= 1
     assert body["status"] == "pending"
+    assert set(body.keys()) == {
+        "id",
+        "slot_start",
+        "customer_name",
+        "customer_email",
+        "status",
+    }
+    assert "created_at" not in body
 
 
 def test_create_booking_conflict(client: TestClient) -> None:
@@ -49,11 +57,13 @@ def test_create_booking_conflict(client: TestClient) -> None:
 
     assert first.status_code == 201
     assert second.status_code == 409
+    assert isinstance(second.json()["detail"], str)
 
 
 def test_get_booking_not_found(client: TestClient) -> None:
     response = client.get("/api/bookings/999999")
     assert response.status_code == 404
+    assert isinstance(response.json()["detail"], str)
 
 
 def test_list_upcoming_returns_sorted_results(client: TestClient) -> None:
@@ -92,3 +102,22 @@ def test_list_upcoming_rejects_invalid_limit(client: TestClient) -> None:
     )
 
     assert response.status_code == 422
+    detail = response.json()["detail"]
+    assert isinstance(detail, list)
+    assert len(detail) >= 1
+    first_error = detail[0]
+    assert first_error["loc"][-1] == "limit"
+    assert first_error["type"] == "greater_than_equal"
+
+
+def test_create_booking_accepts_timezone_aware_slot_start(client: TestClient) -> None:
+    response = client.post(
+        "/api/bookings/",
+        json={
+            "slot_start": "2026-01-01T10:00:00+00:00",
+            "customer_name": "Aware",
+            "customer_email": "aware@example.com",
+        },
+    )
+
+    assert response.status_code == 201
