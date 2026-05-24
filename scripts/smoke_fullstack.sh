@@ -38,15 +38,35 @@ fi
 
 curl -fsS "$BASE_URL/web/app.js" >/dev/null
 
-SLOT_START="2026-06-01T10:00:00"
-PAYLOAD="{\"slot_start\":\"$SLOT_START\",\"customer_name\":\"Smoke User\",\"customer_email\":\"smoke@example.com\"}"
+SMOKE_PAYLOAD_JSON="$(python3 scripts/generate_smoke_booking_payload.py)"
+SLOT_START="$(python3 - <<PY
+import json
+print(json.loads("""$SMOKE_PAYLOAD_JSON""")["slot_start"])
+PY
+)"
+FROM_TS="$(python3 - <<PY
+import json
+print(json.loads("""$SMOKE_PAYLOAD_JSON""")["from_ts"])
+PY
+)"
+EMAIL_SUFFIX="$(python3 - <<PY
+import json
+print(json.loads("""$SMOKE_PAYLOAD_JSON""")["email_suffix"])
+PY
+)"
+BUDGET_SLOT_START="$(python3 - <<PY
+import json
+print(json.loads("""$SMOKE_PAYLOAD_JSON""")["budget_slot_start"])
+PY
+)"
+PAYLOAD="{\"slot_start\":\"$SLOT_START\",\"customer_name\":\"Smoke User\",\"customer_email\":\"smoke-${EMAIL_SUFFIX}@example.com\"}"
 
 create_code=$(curl -s -o /tmp/create_response.json -w "%{http_code}" -X POST "$BASE_URL/api/bookings/" \
   -H "Content-Type: application/json" \
   -d "$PAYLOAD")
 create_ms=$(curl -s -o /dev/null -w "%{time_total}" -X POST "$BASE_URL/api/bookings/" \
   -H "Content-Type: application/json" \
-  -d "{\"slot_start\":\"2026-06-01T11:00:00\",\"customer_name\":\"Budget User\",\"customer_email\":\"budget@example.com\"}")
+  -d "{\"slot_start\":\"$BUDGET_SLOT_START\",\"customer_name\":\"Budget User\",\"customer_email\":\"budget-${EMAIL_SUFFIX}@example.com\"}")
 create_ms=$(python3 - <<PY
 print(int(float("$create_ms") * 1000))
 PY
@@ -73,9 +93,9 @@ if [[ "$conflict_code" != "409" ]]; then
 fi
 
 upcoming_code=$(curl -s -o /tmp/upcoming_response.json -w "%{http_code}" \
-  "$BASE_URL/api/bookings/upcoming?from_ts=2026-06-01T00:00:00&limit=10&offset=0")
+  "$BASE_URL/api/bookings/upcoming?from_ts=$FROM_TS&limit=10&offset=0")
 upcoming_ms=$(curl -s -o /dev/null -w "%{time_total}" \
-  "$BASE_URL/api/bookings/upcoming?from_ts=2026-06-01T00:00:00&limit=10&offset=0")
+  "$BASE_URL/api/bookings/upcoming?from_ts=$FROM_TS&limit=10&offset=0")
 upcoming_ms=$(python3 - <<PY
 print(int(float("$upcoming_ms") * 1000))
 PY
