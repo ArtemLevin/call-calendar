@@ -1,3 +1,15 @@
+
+const mobileMenuToggle = document.getElementById('mobile-menu-toggle');
+const primaryNav = document.getElementById('primary-nav');
+
+if (mobileMenuToggle && primaryNav) {
+  mobileMenuToggle.addEventListener('click', () => {
+    const expanded = mobileMenuToggle.getAttribute('aria-expanded') === 'true';
+    mobileMenuToggle.setAttribute('aria-expanded', String(!expanded));
+    primaryNav.classList.toggle('is-open', !expanded);
+  });
+}
+
 const config = window.APP_CONFIG ?? { API_BASE_URL: '/api' };
 
 const bookingForm = document.getElementById('booking-form');
