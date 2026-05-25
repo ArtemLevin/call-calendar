@@ -6,7 +6,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.db.models.booking import Booking
 from app.exceptions import SlotNotAvailableError
-from app.schemas.booking import BookingCreate
+from app.schemas.booking import BookingCreate, BookingStatus
 
 
 class BookingRepository:
@@ -25,6 +25,9 @@ class BookingRepository:
             slot_start=data.slot_start,
             customer_name=data.customer_name,
             customer_email=str(data.customer_email),
+            meeting_provider=data.meeting_provider,
+            meeting_timezone=data.meeting_timezone,
+            meeting_duration_minutes=data.meeting_duration_minutes,
         )
         self.session.add(booking)
         # Why: slot conflicts are a write-time race condition, so we treat database
@@ -47,16 +50,21 @@ class BookingRepository:
         error_text = str(exc.orig).lower() if exc.orig is not None else ""
         return "bookings.slot_start" in error_text and "unique" in error_text
 
-    async def list_upcoming(self, from_ts: datetime, limit: int, offset: int) -> list[Booking]:
+    async def list_upcoming(
+        self,
+        from_ts: datetime,
+        status: BookingStatus | None,
+        limit: int,
+        offset: int,
+    ) -> list[Booking]:
         # Why: DB-side filtering/pagination avoids materializing full datasets in API
         # memory, which keeps latency and memory use stable as data grows.
-        stmt: Select[tuple[Booking]] = (
-            select(Booking)
-            .where(Booking.slot_start >= from_ts)
-            .order_by(Booking.slot_start.asc(), Booking.id.asc())
-            .limit(limit)
-            .offset(offset)
-        )
+        stmt: Select[tuple[Booking]] = select(Booking).where(Booking.slot_start >= from_ts)
+        # Why: optional status filtering supports owner-oriented read views while
+        # keeping the endpoint contract backward compatible when filter is omitted.
+        if status is not None:
+            stmt = stmt.where(Booking.status == status)
+        stmt = stmt.order_by(Booking.slot_start.asc(), Booking.id.asc()).limit(limit).offset(offset)
         result = await self.session.execute(stmt)
         return list(result.scalars().all())
 

@@ -63,10 +63,13 @@ Use the browser UI to create bookings, inspect 409/422 error handling, and page 
 
 - Datetime inputs use ISO-8601. The service stores and operates on naive UTC datetimes.
 - `GET /api/bookings/upcoming` uses current naive UTC when `from_ts` is omitted.
+- `GET /api/bookings/upcoming` supports optional `status` filtering using:
+  `pending`, `confirmed`, `cancelled`, `completed`.
 - Error contracts:
   - `409` and `404` return a string `detail`;
   - `422` returns FastAPI/Pydantic validation details.
 - `BookingResponse` includes `id`, `slot_start`, `customer_name`, `customer_email`, `status`.
+  It also includes meeting metadata: `meeting_provider`, `meeting_timezone`, `meeting_duration_minutes`.
   `created_at` is intentionally internal DB metadata and is not part of the public response contract.
 
 ## Full-stack smoke check
