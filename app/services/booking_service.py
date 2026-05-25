@@ -2,16 +2,30 @@ from datetime import datetime, timezone
 
 from app.db.models.booking import Booking
 from app.db.repositories.booking_repository import BookingRepository
-from app.exceptions import BookingNotFoundError
-from app.schemas.booking import BookingCreate, BookingUpcomingQuery
+from app.exceptions import (
+    BookingNotFoundError,
+    InvalidBookingSlotError,
+    InvalidBookingStatusTransitionError,
+)
+from app.schemas.booking import BookingCreate, BookingStatus, BookingUpcomingQuery
 
 
 class BookingService:
+    _ALLOWED_STATUS_TRANSITIONS: dict[BookingStatus, set[BookingStatus]] = {
+        BookingStatus.PENDING: {BookingStatus.CONFIRMED, BookingStatus.CANCELLED},
+        BookingStatus.CONFIRMED: {BookingStatus.COMPLETED, BookingStatus.CANCELLED},
+        BookingStatus.CANCELLED: set(),
+        BookingStatus.COMPLETED: set(),
+    }
+
     def __init__(self, repository: BookingRepository) -> None:
         self.repository = repository
 
     async def create_booking(self, data: BookingCreate) -> Booking:
-        return await self.repository.create(data)
+        normalized_slot_start = self._normalize_to_utc_naive(data.slot_start)
+        self._ensure_slot_policy(normalized_slot_start)
+        normalized_data = data.model_copy(update={"slot_start": normalized_slot_start})
+        return await self.repository.create(normalized_data)
 
     async def get_by_id(self, booking_id: int) -> Booking:
         booking = await self.repository.get_by_id(booking_id)
@@ -20,11 +34,42 @@ class BookingService:
         return booking
 
     async def list_upcoming(self, query: BookingUpcomingQuery) -> list[Booking]:
-        return await self.repository.list_upcoming(
-            from_ts=query.from_ts,
-            limit=query.limit,
-            offset=query.offset,
+        normalized_query = query.model_copy(
+            update={"from_ts": self._normalize_to_utc_naive(query.from_ts)}
         )
+        return await self.repository.list_upcoming(
+            from_ts=normalized_query.from_ts,
+            limit=normalized_query.limit,
+            offset=normalized_query.offset,
+        )
+
+    async def update_status(self, booking_id: int, new_status: BookingStatus) -> Booking:
+        booking = await self.get_by_id(booking_id)
+        if new_status == booking.status:
+            return booking
+
+        allowed_transitions = self._ALLOWED_STATUS_TRANSITIONS[booking.status]
+        if new_status not in allowed_transitions:
+            raise InvalidBookingStatusTransitionError(
+                current_status=booking.status.value,
+                requested_status=new_status.value,
+            )
+
+        booking.status = new_status
+        return await self.repository.save(booking)
+
+    @staticmethod
+    def _normalize_to_utc_naive(value: datetime) -> datetime:
+        if value.tzinfo is None:
+            return value
+        return value.astimezone(timezone.utc).replace(tzinfo=None)
+
+    @staticmethod
+    def _ensure_slot_policy(slot_start: datetime) -> None:
+        if slot_start.second != 0 or slot_start.microsecond != 0:
+            raise InvalidBookingSlotError(str(slot_start))
+        if slot_start.minute not in {0, 30}:
+            raise InvalidBookingSlotError(str(slot_start))
 
 
 def get_utc_now_naive() -> datetime:

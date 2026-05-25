@@ -16,3 +16,24 @@ class SlotNotAvailableError(BookingError):
     def __init__(self, slot_start: str):
         super().__init__(f"Slot {slot_start} is not available")
         self.slot_start = slot_start
+
+
+class InvalidBookingSlotError(BookingError):
+    """Raised when slot violates booking policy constraints."""
+
+    def __init__(self, slot_start: str):
+        super().__init__(
+            f"Slot {slot_start} must be aligned to 30-minute boundaries with zero seconds"
+        )
+        self.slot_start = slot_start
+
+
+class InvalidBookingStatusTransitionError(BookingError):
+    """Raised when status transition violates booking state policy."""
+
+    def __init__(self, current_status: str, requested_status: str):
+        super().__init__(
+            f"Cannot transition booking status from {current_status} to {requested_status}"
+        )
+        self.current_status = current_status
+        self.requested_status = requested_status

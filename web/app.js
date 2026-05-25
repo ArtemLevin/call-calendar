@@ -19,6 +19,8 @@ let selectedDate = null;
 let selectedTime = null;
 let timeFormat = '24h';
 let availableSlots = {};
+const WORKDAY_START_HOUR = 9;
+const WORKDAY_END_HOUR = 18;
 
 function ymd(date) {
   return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
@@ -44,6 +46,29 @@ function formatSlot(time24) {
 
 function slotsForDate(dateKey) {
   return availableSlots[dateKey] ?? [];
+}
+
+function enumerateBookableSlotsInMonth(monthDate) {
+  const y = monthDate.getFullYear();
+  const m = monthDate.getMonth();
+  const daysInMonth = new Date(y, m + 1, 0).getDate();
+  const slotsByDate = {};
+
+  for (let day = 1; day <= daysInMonth; day += 1) {
+    const date = new Date(y, m, day);
+    const isWeekend = date.getDay() === 0 || date.getDay() === 6;
+    if (isWeekend) continue;
+
+    const key = ymd(date);
+    slotsByDate[key] = [];
+
+    for (let hour = WORKDAY_START_HOUR; hour < WORKDAY_END_HOUR; hour += 1) {
+      slotsByDate[key].push(`${String(hour).padStart(2, '0')}:00`);
+      slotsByDate[key].push(`${String(hour).padStart(2, '0')}:30`);
+    }
+  }
+
+  return slotsByDate;
 }
 
 function renderSlots() {
@@ -127,21 +152,29 @@ async function loadUpcoming() {
     throw new Error(formatErrorMessage(response, payload));
   }
 
-  availableSlots = {};
+  const bookedSlots = {};
   for (const booking of payload) {
     const [datePart, timePart] = booking.slot_start.split('T');
     const slotTime = (timePart ?? '').slice(0, 5);
     if (!slotTime) continue;
-    if (!availableSlots[datePart]) {
-      availableSlots[datePart] = [];
+    if (!bookedSlots[datePart]) {
+      bookedSlots[datePart] = [];
     }
-    if (!availableSlots[datePart].includes(slotTime)) {
-      availableSlots[datePart].push(slotTime);
+    if (!bookedSlots[datePart].includes(slotTime)) {
+      bookedSlots[datePart].push(slotTime);
     }
   }
 
+  availableSlots = enumerateBookableSlotsInMonth(currentMonth);
+
   for (const dateKey of Object.keys(availableSlots)) {
+    const dayBooked = new Set(bookedSlots[dateKey] ?? []);
+    availableSlots[dateKey] = availableSlots[dateKey].filter((slot) => !dayBooked.has(slot));
     availableSlots[dateKey].sort();
+
+    if (availableSlots[dateKey].length === 0) {
+      delete availableSlots[dateKey];
+    }
   }
 
   const firstDate = Object.keys(availableSlots).sort()[0] ?? null;
