@@ -164,6 +164,65 @@ async def test_list_upcoming_normalizes_timezone_aware_from_ts(db_session: Async
 
 
 @pytest.mark.asyncio
+async def test_list_upcoming_filters_by_status(db_session: AsyncSession) -> None:
+    service = BookingService(BookingRepository(db_session))
+    confirmed = await service.create_booking(
+        BookingCreate(
+            slot_start=datetime(2026, 1, 1, 13, 0),
+            customer_name="Confirmed",
+            customer_email="confirmed@example.com",
+        )
+    )
+    cancelled = await service.create_booking(
+        BookingCreate(
+            slot_start=datetime(2026, 1, 1, 13, 30),
+            customer_name="Cancelled",
+            customer_email="cancelled@example.com",
+        )
+    )
+    await service.update_status(confirmed.id, BookingStatus.CONFIRMED)
+    await service.update_status(cancelled.id, BookingStatus.CANCELLED)
+
+    filtered = await service.list_upcoming(
+        BookingUpcomingQuery(
+            from_ts=datetime(2026, 1, 1, 12, 0),
+            status=BookingStatus.CONFIRMED,
+            limit=10,
+            offset=0,
+        )
+    )
+
+    assert len(filtered) == 1
+    assert filtered[0].customer_name == "Confirmed"
+
+
+@pytest.mark.asyncio
+async def test_list_upcoming_with_status_filter_normalizes_timezone_aware_from_ts(
+    db_session: AsyncSession,
+) -> None:
+    service = BookingService(BookingRepository(db_session))
+    created = await service.create_booking(
+        BookingCreate(
+            slot_start=datetime(2026, 1, 1, 10, 0),
+            customer_name="Aware Confirmed",
+            customer_email="aware-confirmed@example.com",
+        )
+    )
+    await service.update_status(created.id, BookingStatus.CONFIRMED)
+
+    result = await service.list_upcoming(
+        BookingUpcomingQuery(
+            from_ts=datetime.fromisoformat("2026-01-01T12:30:00+03:00"),
+            status=BookingStatus.CONFIRMED,
+            limit=10,
+            offset=0,
+        )
+    )
+
+    assert len(result) == 1
+
+
+@pytest.mark.asyncio
 async def test_update_status_allows_pending_to_confirmed(db_session: AsyncSession) -> None:
     service = BookingService(BookingRepository(db_session))
     created = await service.create_booking(

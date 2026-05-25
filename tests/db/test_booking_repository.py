@@ -5,7 +5,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.db.repositories.booking_repository import BookingRepository
 from app.exceptions import SlotNotAvailableError
-from app.schemas.booking import BookingCreate
+from app.schemas.booking import BookingCreate, BookingStatus
 
 
 @pytest.mark.asyncio
@@ -98,7 +98,56 @@ async def test_repository_list_upcoming_applies_filter_sort_and_pagination(db_se
         )
     )
 
-    page = await repo.list_upcoming(from_ts=datetime(2026, 1, 1, 10, 30), limit=1, offset=0)
+    page = await repo.list_upcoming(
+        from_ts=datetime(2026, 1, 1, 10, 30),
+        status=None,
+        limit=1,
+        offset=0,
+    )
 
     assert len(page) == 1
     assert page[0].customer_name == "Middle"
+
+
+@pytest.mark.asyncio
+async def test_repository_list_upcoming_filters_by_status_without_breaking_order(db_session: AsyncSession) -> None:
+    repo = BookingRepository(db_session)
+    first = await repo.create(
+        BookingCreate(
+            slot_start=datetime(2026, 1, 1, 10, 0),
+            customer_name="First Confirmed",
+            customer_email="first-confirmed@example.com",
+        )
+    )
+    second = await repo.create(
+        BookingCreate(
+            slot_start=datetime(2026, 1, 1, 11, 0),
+            customer_name="Cancelled",
+            customer_email="cancelled@example.com",
+        )
+    )
+    third = await repo.create(
+        BookingCreate(
+            slot_start=datetime(2026, 1, 1, 12, 0),
+            customer_name="Second Confirmed",
+            customer_email="second-confirmed@example.com",
+        )
+    )
+    first.status = BookingStatus.CONFIRMED
+    second.status = BookingStatus.CANCELLED
+    third.status = BookingStatus.CONFIRMED
+    await repo.save(first)
+    await repo.save(second)
+    await repo.save(third)
+
+    filtered = await repo.list_upcoming(
+        from_ts=datetime(2026, 1, 1, 0, 0),
+        status=BookingStatus.CONFIRMED,
+        limit=10,
+        offset=0,
+    )
+
+    assert [booking.customer_name for booking in filtered] == [
+        "First Confirmed",
+        "Second Confirmed",
+    ]
