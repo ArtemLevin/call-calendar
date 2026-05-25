@@ -65,6 +65,10 @@ Use the browser UI to create bookings, inspect 409/422 error handling, and page 
 - `GET /api/bookings/upcoming` uses current naive UTC when `from_ts` is omitted.
 - `GET /api/bookings/upcoming` supports optional `status` filtering using:
   `pending`, `confirmed`, `cancelled`, `completed`.
+- Meeting metadata settings endpoints:
+  - `GET /api/meeting-metadata/options`
+  - `GET /api/meeting-settings`
+  - `PATCH /api/meeting-settings`
 - Error contracts:
   - `409` and `404` return a string `detail`;
   - `422` returns FastAPI/Pydantic validation details.

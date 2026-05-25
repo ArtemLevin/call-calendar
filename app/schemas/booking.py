@@ -59,3 +59,21 @@ class BookingResponse(BaseModel):
     meeting_duration_minutes: MeetingDurationMinutes
 
     model_config = {"from_attributes": True}
+
+
+class MeetingSettingsResponse(BaseModel):
+    meeting_provider: MeetingProvider
+    meeting_timezone: MeetingTimezone
+    meeting_duration_minutes: MeetingDurationMinutes
+
+
+class MeetingSettingsUpdate(BaseModel):
+    meeting_provider: MeetingProvider
+    meeting_timezone: MeetingTimezone
+    meeting_duration_minutes: MeetingDurationMinutes
+
+
+class MeetingMetadataOptionsResponse(BaseModel):
+    meeting_provider_options: list[MeetingProvider]
+    meeting_timezone_options: list[MeetingTimezone]
+    meeting_duration_minutes_options: list[MeetingDurationMinutes]

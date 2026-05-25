@@ -54,8 +54,14 @@ Why: status code + payload shape stability protects frontend and external API cl
 ### Booking Response Contract Policy
 
 - `BookingResponse` is intentionally limited to:
-  `id`, `slot_start`, `customer_name`, `customer_email`, `status`.
+  `id`, `slot_start`, `customer_name`, `customer_email`, `status`,
+  `meeting_provider`, `meeting_timezone`, `meeting_duration_minutes`.
 - `created_at` remains internal persistence metadata and is not exposed in public API responses.
+
+Meeting metadata dropdown/source-of-truth endpoints:
+- `GET /api/meeting-metadata/options`
+- `GET /api/meeting-settings`
+- `PATCH /api/meeting-settings`
 
 Why: excluding internal metadata avoids accidental client coupling and allows future extension through versioned contracts when needed.
 
