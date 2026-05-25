@@ -37,6 +37,8 @@ if (( root_ms > ROOT_BUDGET_MS )); then
 fi
 
 curl -fsS "$BASE_URL/web/app.js" >/dev/null
+curl -fsS "$BASE_URL/api/meeting-metadata/options" >/dev/null
+curl -fsS "$BASE_URL/api/meeting-settings" >/dev/null
 
 SMOKE_PAYLOAD_JSON="$(python3 scripts/generate_smoke_booking_payload.py)"
 SLOT_START="$(python3 - <<PY

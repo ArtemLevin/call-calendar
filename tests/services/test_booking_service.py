@@ -5,6 +5,7 @@ import pytest
 from sqlalchemy.ext.asyncio import AsyncEngine, AsyncSession, async_sessionmaker
 
 from app.db.repositories.booking_repository import BookingRepository
+from app.db.repositories.meeting_settings_repository import MeetingSettingsRepository
 from app.exceptions import (
     BookingNotFoundError,
     InvalidBookingSlotError,
@@ -15,9 +16,13 @@ from app.schemas.booking import BookingCreate, BookingStatus, BookingUpcomingQue
 from app.services.booking_service import BookingService
 
 
+def make_service(session: AsyncSession) -> BookingService:
+    return BookingService(BookingRepository(session), MeetingSettingsRepository(session))
+
+
 @pytest.mark.asyncio
 async def test_create_booking_success(db_session: AsyncSession) -> None:
-    service = BookingService(BookingRepository(db_session))
+    service = make_service(db_session)
     payload = BookingCreate(
         slot_start=datetime(2026, 1, 1, 10, 0),
         customer_name="Alice",
@@ -28,11 +33,33 @@ async def test_create_booking_success(db_session: AsyncSession) -> None:
 
     assert booking.id >= 1
     assert booking.customer_name == "Alice"
+    assert booking.meeting_provider.value == "google_meet"
+    assert booking.meeting_timezone.value == "Asia/Yekaterinburg"
+    assert booking.meeting_duration_minutes.value == 30
+
+
+@pytest.mark.asyncio
+async def test_create_booking_persists_explicit_meeting_metadata(db_session: AsyncSession) -> None:
+    service = make_service(db_session)
+    payload = BookingCreate(
+        slot_start=datetime(2026, 1, 1, 10, 30),
+        customer_name="Alice",
+        customer_email="alice-meta@example.com",
+        meeting_provider="zoom",
+        meeting_timezone="UTC",
+        meeting_duration_minutes=30,
+    )
+
+    booking = await service.create_booking(payload)
+
+    assert booking.meeting_provider.value == "zoom"
+    assert booking.meeting_timezone.value == "UTC"
+    assert booking.meeting_duration_minutes.value == 30
 
 
 @pytest.mark.asyncio
 async def test_create_booking_conflict(db_session: AsyncSession) -> None:
-    service = BookingService(BookingRepository(db_session))
+    service = make_service(db_session)
     payload = BookingCreate(
         slot_start=datetime(2026, 1, 1, 10, 0),
         customer_name="Alice",
@@ -56,7 +83,7 @@ async def test_create_booking_concurrent_conflict(test_engine: AsyncEngine) -> N
 
     async def attempt_create() -> object:
         async with session_factory() as session:
-            service = BookingService(BookingRepository(session))
+            service = make_service(session)
             return await service.create_booking(payload)
 
     # Why: AsyncSession is not safe for concurrent use, so each racing request gets
@@ -69,7 +96,7 @@ async def test_create_booking_concurrent_conflict(test_engine: AsyncEngine) -> N
     assert len(conflicts) == 1
 
     async with session_factory() as verification_session:
-        verification_service = BookingService(BookingRepository(verification_session))
+        verification_service = make_service(verification_session)
         persisted = await verification_service.list_upcoming(
             BookingUpcomingQuery(from_ts=datetime(2026, 1, 1, 10, 29), limit=10, offset=0)
         )
@@ -78,7 +105,7 @@ async def test_create_booking_concurrent_conflict(test_engine: AsyncEngine) -> N
 
 @pytest.mark.asyncio
 async def test_get_booking_not_found(db_session: AsyncSession) -> None:
-    service = BookingService(BookingRepository(db_session))
+    service = make_service(db_session)
 
     with pytest.raises(BookingNotFoundError):
         await service.get_by_id(999)
@@ -86,7 +113,7 @@ async def test_get_booking_not_found(db_session: AsyncSession) -> None:
 
 @pytest.mark.asyncio
 async def test_list_upcoming_returns_sorted_page(db_session: AsyncSession) -> None:
-    service = BookingService(BookingRepository(db_session))
+    service = make_service(db_session)
 
     await service.create_booking(
         BookingCreate(
@@ -113,7 +140,7 @@ async def test_list_upcoming_returns_sorted_page(db_session: AsyncSession) -> No
 
 @pytest.mark.asyncio
 async def test_create_booking_rejects_non_30_minute_slot(db_session: AsyncSession) -> None:
-    service = BookingService(BookingRepository(db_session))
+    service = make_service(db_session)
 
     with pytest.raises(InvalidBookingSlotError):
         await service.create_booking(
@@ -127,7 +154,7 @@ async def test_create_booking_rejects_non_30_minute_slot(db_session: AsyncSessio
 
 @pytest.mark.asyncio
 async def test_create_booking_normalizes_timezone_aware_slot(db_session: AsyncSession) -> None:
-    service = BookingService(BookingRepository(db_session))
+    service = make_service(db_session)
     aware_plus_three = datetime.fromisoformat("2026-01-01T13:00:00+03:00")
 
     created = await service.create_booking(
@@ -143,7 +170,7 @@ async def test_create_booking_normalizes_timezone_aware_slot(db_session: AsyncSe
 
 @pytest.mark.asyncio
 async def test_list_upcoming_normalizes_timezone_aware_from_ts(db_session: AsyncSession) -> None:
-    service = BookingService(BookingRepository(db_session))
+    service = make_service(db_session)
     await service.create_booking(
         BookingCreate(
             slot_start=datetime(2026, 1, 1, 10, 0),
@@ -164,8 +191,67 @@ async def test_list_upcoming_normalizes_timezone_aware_from_ts(db_session: Async
 
 
 @pytest.mark.asyncio
+async def test_list_upcoming_filters_by_status(db_session: AsyncSession) -> None:
+    service = make_service(db_session)
+    confirmed = await service.create_booking(
+        BookingCreate(
+            slot_start=datetime(2026, 1, 1, 13, 0),
+            customer_name="Confirmed",
+            customer_email="confirmed@example.com",
+        )
+    )
+    cancelled = await service.create_booking(
+        BookingCreate(
+            slot_start=datetime(2026, 1, 1, 13, 30),
+            customer_name="Cancelled",
+            customer_email="cancelled@example.com",
+        )
+    )
+    await service.update_status(confirmed.id, BookingStatus.CONFIRMED)
+    await service.update_status(cancelled.id, BookingStatus.CANCELLED)
+
+    filtered = await service.list_upcoming(
+        BookingUpcomingQuery(
+            from_ts=datetime(2026, 1, 1, 12, 0),
+            status=BookingStatus.CONFIRMED,
+            limit=10,
+            offset=0,
+        )
+    )
+
+    assert len(filtered) == 1
+    assert filtered[0].customer_name == "Confirmed"
+
+
+@pytest.mark.asyncio
+async def test_list_upcoming_with_status_filter_normalizes_timezone_aware_from_ts(
+    db_session: AsyncSession,
+) -> None:
+    service = make_service(db_session)
+    created = await service.create_booking(
+        BookingCreate(
+            slot_start=datetime(2026, 1, 1, 10, 0),
+            customer_name="Aware Confirmed",
+            customer_email="aware-confirmed@example.com",
+        )
+    )
+    await service.update_status(created.id, BookingStatus.CONFIRMED)
+
+    result = await service.list_upcoming(
+        BookingUpcomingQuery(
+            from_ts=datetime.fromisoformat("2026-01-01T12:30:00+03:00"),
+            status=BookingStatus.CONFIRMED,
+            limit=10,
+            offset=0,
+        )
+    )
+
+    assert len(result) == 1
+
+
+@pytest.mark.asyncio
 async def test_update_status_allows_pending_to_confirmed(db_session: AsyncSession) -> None:
-    service = BookingService(BookingRepository(db_session))
+    service = make_service(db_session)
     created = await service.create_booking(
         BookingCreate(
             slot_start=datetime(2026, 1, 1, 11, 0),
@@ -181,7 +267,7 @@ async def test_update_status_allows_pending_to_confirmed(db_session: AsyncSessio
 
 @pytest.mark.asyncio
 async def test_update_status_rejects_completed_to_pending(db_session: AsyncSession) -> None:
-    service = BookingService(BookingRepository(db_session))
+    service = make_service(db_session)
     created = await service.create_booking(
         BookingCreate(
             slot_start=datetime(2026, 1, 1, 11, 30),
@@ -194,3 +280,28 @@ async def test_update_status_rejects_completed_to_pending(db_session: AsyncSessi
 
     with pytest.raises(InvalidBookingStatusTransitionError):
         await service.update_status(completed.id, BookingStatus.PENDING)
+
+
+@pytest.mark.asyncio
+async def test_update_status_is_idempotent_for_same_status(db_session: AsyncSession) -> None:
+    service = make_service(db_session)
+    created = await service.create_booking(
+        BookingCreate(
+            slot_start=datetime(2026, 1, 1, 12, 0),
+            customer_name="Idempotent",
+            customer_email="idempotent@example.com",
+        )
+    )
+
+    unchanged = await service.update_status(created.id, BookingStatus.PENDING)
+
+    assert unchanged.id == created.id
+    assert unchanged.status == BookingStatus.PENDING
+
+
+@pytest.mark.asyncio
+async def test_update_status_not_found_raises_booking_not_found(db_session: AsyncSession) -> None:
+    service = make_service(db_session)
+
+    with pytest.raises(BookingNotFoundError):
+        await service.update_status(booking_id=999999, new_status=BookingStatus.CONFIRMED)
