@@ -5,7 +5,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.db.repositories.booking_repository import BookingRepository
 from app.exceptions import SlotNotAvailableError
-from app.schemas.booking import BookingCreate
+from app.schemas.booking import BookingCreate, BookingStatus
 
 
 @pytest.mark.asyncio
@@ -22,6 +22,31 @@ async def test_repository_create_and_get(db_session: AsyncSession) -> None:
 
     assert fetched is not None
     assert fetched.id == created.id
+    assert fetched.meeting_provider.value == "google_meet"
+    assert fetched.meeting_timezone.value == "Asia/Yekaterinburg"
+    assert fetched.meeting_duration_minutes.value == 30
+
+
+@pytest.mark.asyncio
+async def test_repository_create_persists_explicit_meeting_metadata(db_session: AsyncSession) -> None:
+    repo = BookingRepository(db_session)
+    created = await repo.create(
+        BookingCreate(
+            slot_start=datetime(2026, 1, 1, 9, 30),
+            customer_name="Repo Meta",
+            customer_email="repo-meta@example.com",
+            meeting_provider="phone",
+            meeting_timezone="UTC",
+            meeting_duration_minutes=30,
+        )
+    )
+
+    fetched = await repo.get_by_id(created.id)
+
+    assert fetched is not None
+    assert fetched.meeting_provider.value == "phone"
+    assert fetched.meeting_timezone.value == "UTC"
+    assert fetched.meeting_duration_minutes.value == 30
 
 
 @pytest.mark.asyncio
@@ -98,7 +123,56 @@ async def test_repository_list_upcoming_applies_filter_sort_and_pagination(db_se
         )
     )
 
-    page = await repo.list_upcoming(from_ts=datetime(2026, 1, 1, 10, 30), limit=1, offset=0)
+    page = await repo.list_upcoming(
+        from_ts=datetime(2026, 1, 1, 10, 30),
+        status=None,
+        limit=1,
+        offset=0,
+    )
 
     assert len(page) == 1
     assert page[0].customer_name == "Middle"
+
+
+@pytest.mark.asyncio
+async def test_repository_list_upcoming_filters_by_status_without_breaking_order(db_session: AsyncSession) -> None:
+    repo = BookingRepository(db_session)
+    first = await repo.create(
+        BookingCreate(
+            slot_start=datetime(2026, 1, 1, 10, 0),
+            customer_name="First Confirmed",
+            customer_email="first-confirmed@example.com",
+        )
+    )
+    second = await repo.create(
+        BookingCreate(
+            slot_start=datetime(2026, 1, 1, 11, 0),
+            customer_name="Cancelled",
+            customer_email="cancelled@example.com",
+        )
+    )
+    third = await repo.create(
+        BookingCreate(
+            slot_start=datetime(2026, 1, 1, 12, 0),
+            customer_name="Second Confirmed",
+            customer_email="second-confirmed@example.com",
+        )
+    )
+    first.status = BookingStatus.CONFIRMED
+    second.status = BookingStatus.CANCELLED
+    third.status = BookingStatus.CONFIRMED
+    await repo.save(first)
+    await repo.save(second)
+    await repo.save(third)
+
+    filtered = await repo.list_upcoming(
+        from_ts=datetime(2026, 1, 1, 0, 0),
+        status=BookingStatus.CONFIRMED,
+        limit=10,
+        offset=0,
+    )
+
+    assert [booking.customer_name for booking in filtered] == [
+        "First Confirmed",
+        "Second Confirmed",
+    ]

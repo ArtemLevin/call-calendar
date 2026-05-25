@@ -1,6 +1,7 @@
 const config = window.APP_CONFIG ?? { API_BASE_URL: '/api' };
 
 const overlayToggle = document.getElementById('overlay-toggle');
+const settingsButton = document.getElementById('settings-button');
 const viewButtons = Array.from(document.querySelectorAll('.icon-btn[data-view]'));
 const monthLabel = document.getElementById('month-label');
 const prevMonth = document.getElementById('prev-month');
@@ -13,12 +14,21 @@ const format12h = document.getElementById('format-12h');
 const format24h = document.getElementById('format-24h');
 const bookingForm = document.getElementById('booking-form');
 const bookingResult = document.getElementById('booking-result');
+const meetingTitle = document.getElementById('meeting-title');
+const meetingDurationSelect = document.getElementById('meeting-duration-select');
+const meetingProviderSelect = document.getElementById('meeting-provider-select');
+const meetingTimezoneSelect = document.getElementById('meeting-timezone-select');
 
 let currentMonth = new Date();
 let selectedDate = null;
 let selectedTime = null;
 let timeFormat = '24h';
 let availableSlots = {};
+let meetingSettings = {
+  meeting_provider: 'google_meet',
+  meeting_timezone: 'Asia/Yekaterinburg',
+  meeting_duration_minutes: 30,
+};
 const WORKDAY_START_HOUR = 9;
 const WORKDAY_END_HOUR = 18;
 
@@ -34,6 +44,89 @@ function formatErrorMessage(response, payload) {
   if (response.status === 409) return payload?.detail ?? 'Slot is already booked.';
   if (response.status === 422) return 'Invalid data. Check selected slot, name, and email.';
   return payload?.detail ?? `Unexpected error (${response.status})`;
+}
+
+function toMeetingTitle(duration) {
+  return `${duration} Min Meeting`;
+}
+
+function providerLabel(provider) {
+  return provider.replaceAll('_', ' ').replace(/\b\w/g, (letter) => letter.toUpperCase());
+}
+
+function populateSelect(select, values, selectedValue, formatter = (value) => String(value)) {
+  if (!select) return;
+  select.innerHTML = '';
+  for (const value of values) {
+    const option = document.createElement('option');
+    option.value = String(value);
+    option.textContent = formatter(value);
+    option.selected = String(value) === String(selectedValue);
+    select.appendChild(option);
+  }
+}
+
+function renderMeetingSettings() {
+  if (meetingTitle) {
+    meetingTitle.textContent = toMeetingTitle(meetingSettings.meeting_duration_minutes);
+  }
+}
+
+async function loadMeetingSettings() {
+  const [optionsResponse, settingsResponse] = await Promise.all([
+    fetch(`${config.API_BASE_URL}/meeting-metadata/options`),
+    fetch(`${config.API_BASE_URL}/meeting-settings`),
+  ]);
+  const optionsPayload = await parseJsonSafe(optionsResponse);
+  const settingsPayload = await parseJsonSafe(settingsResponse);
+  if (!optionsResponse.ok) {
+    throw new Error(formatErrorMessage(optionsResponse, optionsPayload));
+  }
+  if (!settingsResponse.ok) {
+    throw new Error(formatErrorMessage(settingsResponse, settingsPayload));
+  }
+
+  meetingSettings = settingsPayload;
+  populateSelect(
+    meetingProviderSelect,
+    optionsPayload.meeting_provider_options,
+    settingsPayload.meeting_provider,
+    providerLabel,
+  );
+  populateSelect(
+    meetingTimezoneSelect,
+    optionsPayload.meeting_timezone_options,
+    settingsPayload.meeting_timezone,
+  );
+  populateSelect(
+    meetingDurationSelect,
+    optionsPayload.meeting_duration_minutes_options,
+    settingsPayload.meeting_duration_minutes,
+    (value) => `${value}m`,
+  );
+  renderMeetingSettings();
+}
+
+async function saveMeetingSettings() {
+  const body = {
+    meeting_provider: meetingProviderSelect?.value ?? meetingSettings.meeting_provider,
+    meeting_timezone: meetingTimezoneSelect?.value ?? meetingSettings.meeting_timezone,
+    meeting_duration_minutes: Number(
+      meetingDurationSelect?.value ?? meetingSettings.meeting_duration_minutes,
+    ),
+  };
+  const response = await fetch(`${config.API_BASE_URL}/meeting-settings`, {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(body),
+  });
+  const payload = await parseJsonSafe(response);
+  if (!response.ok) {
+    throw new Error(formatErrorMessage(response, payload));
+  }
+  meetingSettings = payload;
+  renderMeetingSettings();
+  bookingResult.textContent = 'Meeting settings saved.';
 }
 
 function formatSlot(time24) {
@@ -200,6 +293,9 @@ bookingForm?.addEventListener('submit', async (event) => {
     slot_start: toIsoLocal(selectedDate, selectedTime),
     customer_name: document.getElementById('customer_name').value,
     customer_email: document.getElementById('customer_email').value,
+    meeting_provider: meetingSettings.meeting_provider,
+    meeting_timezone: meetingSettings.meeting_timezone,
+    meeting_duration_minutes: meetingSettings.meeting_duration_minutes,
   };
 
   const response = await fetch(`${config.API_BASE_URL}/bookings/`, {
@@ -221,6 +317,28 @@ bookingForm?.addEventListener('submit', async (event) => {
 overlayToggle?.addEventListener('click', () => {
   const on = overlayToggle.getAttribute('aria-checked') === 'true';
   overlayToggle.setAttribute('aria-checked', String(!on));
+});
+
+settingsButton?.addEventListener('click', () => {
+  meetingProviderSelect?.focus();
+});
+
+meetingProviderSelect?.addEventListener('change', () => {
+  saveMeetingSettings().catch((error) => {
+    bookingResult.textContent = error.message;
+  });
+});
+
+meetingTimezoneSelect?.addEventListener('change', () => {
+  saveMeetingSettings().catch((error) => {
+    bookingResult.textContent = error.message;
+  });
+});
+
+meetingDurationSelect?.addEventListener('change', () => {
+  saveMeetingSettings().catch((error) => {
+    bookingResult.textContent = error.message;
+  });
 });
 
 viewButtons.forEach((btn) => {
@@ -258,13 +376,13 @@ format24h?.addEventListener('click', () => {
   renderSlots();
 });
 
-loadUpcoming().catch((error) => {
-  bookingResult.textContent = error.message;
-  renderCalendar();
-  renderSelectedDateLabel();
-  renderSlots();
-});
-
-renderCalendar();
-renderSelectedDateLabel();
-renderSlots();
+Promise.all([loadMeetingSettings(), loadUpcoming()])
+  .catch((error) => {
+    bookingResult.textContent = error.message;
+  })
+  .finally(() => {
+    renderCalendar();
+    renderSelectedDateLabel();
+    renderSlots();
+    renderMeetingSettings();
+  });

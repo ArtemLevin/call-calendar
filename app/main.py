@@ -3,9 +3,11 @@ from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 
 from app.api.endpoints.bookings import router as bookings_router
+from app.api.endpoints.meeting_settings import router as meeting_settings_router
 
 app = FastAPI(title="Call Calendar API")
 app.include_router(bookings_router)
+app.include_router(meeting_settings_router)
 app.mount("/web", StaticFiles(directory="web"), name="web")
 
 
