@@ -55,8 +55,10 @@
               <button id="format-24h" type="button" class="is-active" aria-pressed="true">24h</button>
             </div>
           </header>
-          <div id="slot-list" class="slot-list"></div>
-          <p id="slot-empty" class="slot-empty" hidden>No available times</p>
+          <div class="slots-scroll" aria-label="Available time options">
+            <div id="slot-list" class="slot-list"></div>
+            <p id="slot-empty" class="slot-empty" hidden>No available times</p>
+          </div>
 
           <form id="booking-form" class="booking-form">
             <label>Customer name <input id="customer_name" type="text" minlength="2" required /></label>
