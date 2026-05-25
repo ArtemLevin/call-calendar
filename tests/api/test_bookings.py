@@ -203,3 +203,50 @@ def test_update_booking_status_rejects_invalid_transition(client: TestClient) ->
     invalid = client.patch(f"/api/bookings/{booking_id}/status", json={"status": "pending"})
     assert invalid.status_code == 409
     assert "Cannot transition" in invalid.json()["detail"]
+
+
+def test_update_booking_status_is_idempotent_for_same_status(client: TestClient) -> None:
+    created = client.post(
+        "/api/bookings/",
+        json={
+            "slot_start": datetime(2026, 1, 4, 11, 0).isoformat(),
+            "customer_name": "Idempotent Owner",
+            "customer_email": "idempotent-owner@example.com",
+        },
+    )
+    assert created.status_code == 201
+    booking_id = created.json()["id"]
+
+    unchanged = client.patch(f"/api/bookings/{booking_id}/status", json={"status": "pending"})
+
+    assert unchanged.status_code == 200
+    body = unchanged.json()
+    assert body["id"] == booking_id
+    assert body["status"] == "pending"
+
+
+def test_update_booking_status_returns_404_for_missing_booking(client: TestClient) -> None:
+    response = client.patch("/api/bookings/999999/status", json={"status": "confirmed"})
+
+    assert response.status_code == 404
+    assert isinstance(response.json()["detail"], str)
+
+
+def test_update_booking_status_rejects_invalid_status_payload(client: TestClient) -> None:
+    created = client.post(
+        "/api/bookings/",
+        json={
+            "slot_start": datetime(2026, 1, 4, 11, 30).isoformat(),
+            "customer_name": "Invalid Enum Owner",
+            "customer_email": "invalid-enum-owner@example.com",
+        },
+    )
+    assert created.status_code == 201
+    booking_id = created.json()["id"]
+
+    response = client.patch(f"/api/bookings/{booking_id}/status", json={"status": "archived"})
+
+    assert response.status_code == 422
+    detail = response.json()["detail"]
+    assert isinstance(detail, list)
+    assert len(detail) >= 1
