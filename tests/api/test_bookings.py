@@ -123,6 +123,20 @@ def test_create_booking_accepts_timezone_aware_slot_start(client: TestClient) ->
     assert response.status_code == 201
 
 
+def test_create_booking_rejects_non_30_minute_slot(client: TestClient) -> None:
+    response = client.post(
+        "/api/bookings/",
+        json={
+            "slot_start": datetime(2026, 1, 1, 10, 15).isoformat(),
+            "customer_name": "Invalid Slot",
+            "customer_email": "invalid-slot@example.com",
+        },
+    )
+
+    assert response.status_code == 422
+    assert "30-minute" in response.json()["detail"]
+
+
 def test_upcoming_contains_booked_slots_not_free_slots(client: TestClient) -> None:
     payload = {
         "slot_start": datetime(2026, 1, 3, 10, 0).isoformat(),
