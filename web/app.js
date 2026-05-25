@@ -1,6 +1,7 @@
 const config = window.APP_CONFIG ?? { API_BASE_URL: '/api' };
 
 const overlayToggle = document.getElementById('overlay-toggle');
+const settingsButton = document.getElementById('settings-button');
 const viewButtons = Array.from(document.querySelectorAll('.icon-btn[data-view]'));
 const monthLabel = document.getElementById('month-label');
 const prevMonth = document.getElementById('prev-month');
@@ -221,6 +222,12 @@ bookingForm?.addEventListener('submit', async (event) => {
 overlayToggle?.addEventListener('click', () => {
   const on = overlayToggle.getAttribute('aria-checked') === 'true';
   overlayToggle.setAttribute('aria-checked', String(!on));
+});
+
+settingsButton?.addEventListener('click', () => {
+  // Why: explicit feedback avoids a dead-end control and confirms that
+  // the click action was handled even before dedicated settings UI exists.
+  bookingResult.textContent = 'Settings panel is not available yet.';
 });
 
 viewButtons.forEach((btn) => {

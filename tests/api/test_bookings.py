@@ -110,6 +110,87 @@ def test_list_upcoming_rejects_invalid_limit(client: TestClient) -> None:
     assert first_error["type"] == "greater_than_equal"
 
 
+def test_list_upcoming_filters_by_status(client: TestClient) -> None:
+    first = client.post(
+        "/api/bookings/",
+        json={
+            "slot_start": datetime(2026, 1, 2, 13, 0).isoformat(),
+            "customer_name": "Confirmed API",
+            "customer_email": "confirmed-api@example.com",
+        },
+    )
+    second = client.post(
+        "/api/bookings/",
+        json={
+            "slot_start": datetime(2026, 1, 2, 13, 30).isoformat(),
+            "customer_name": "Cancelled API",
+            "customer_email": "cancelled-api@example.com",
+        },
+    )
+    first_id = first.json()["id"]
+    second_id = second.json()["id"]
+    client.patch(f"/api/bookings/{first_id}/status", json={"status": "confirmed"})
+    client.patch(f"/api/bookings/{second_id}/status", json={"status": "cancelled"})
+
+    response = client.get(
+        "/api/bookings/upcoming",
+        params={
+            "from_ts": datetime(2026, 1, 2, 0, 0).isoformat(),
+            "status": "confirmed",
+            "limit": 10,
+            "offset": 0,
+        },
+    )
+
+    assert response.status_code == 200
+    body = response.json()
+    assert len(body) == 1
+    assert body[0]["customer_name"] == "Confirmed API"
+    assert body[0]["status"] == "confirmed"
+
+
+def test_list_upcoming_rejects_invalid_status_filter(client: TestClient) -> None:
+    response = client.get(
+        "/api/bookings/upcoming",
+        params={
+            "from_ts": datetime(2026, 1, 2, 0, 0).isoformat(),
+            "status": "archived",
+            "limit": 10,
+            "offset": 0,
+        },
+    )
+
+    assert response.status_code == 422
+    detail = response.json()["detail"]
+    assert isinstance(detail, list)
+    assert len(detail) >= 1
+
+
+def test_list_upcoming_returns_empty_with_status_filter_when_no_matches(client: TestClient) -> None:
+    created = client.post(
+        "/api/bookings/",
+        json={
+            "slot_start": datetime(2026, 1, 2, 14, 0).isoformat(),
+            "customer_name": "Pending API",
+            "customer_email": "pending-api@example.com",
+        },
+    )
+    assert created.status_code == 201
+
+    response = client.get(
+        "/api/bookings/upcoming",
+        params={
+            "from_ts": datetime(2026, 1, 2, 0, 0).isoformat(),
+            "status": "completed",
+            "limit": 10,
+            "offset": 0,
+        },
+    )
+
+    assert response.status_code == 200
+    assert response.json() == []
+
+
 def test_create_booking_accepts_timezone_aware_slot_start(client: TestClient) -> None:
     response = client.post(
         "/api/bookings/",
@@ -203,3 +284,50 @@ def test_update_booking_status_rejects_invalid_transition(client: TestClient) ->
     invalid = client.patch(f"/api/bookings/{booking_id}/status", json={"status": "pending"})
     assert invalid.status_code == 409
     assert "Cannot transition" in invalid.json()["detail"]
+
+
+def test_update_booking_status_is_idempotent_for_same_status(client: TestClient) -> None:
+    created = client.post(
+        "/api/bookings/",
+        json={
+            "slot_start": datetime(2026, 1, 4, 11, 0).isoformat(),
+            "customer_name": "Idempotent Owner",
+            "customer_email": "idempotent-owner@example.com",
+        },
+    )
+    assert created.status_code == 201
+    booking_id = created.json()["id"]
+
+    unchanged = client.patch(f"/api/bookings/{booking_id}/status", json={"status": "pending"})
+
+    assert unchanged.status_code == 200
+    body = unchanged.json()
+    assert body["id"] == booking_id
+    assert body["status"] == "pending"
+
+
+def test_update_booking_status_returns_404_for_missing_booking(client: TestClient) -> None:
+    response = client.patch("/api/bookings/999999/status", json={"status": "confirmed"})
+
+    assert response.status_code == 404
+    assert isinstance(response.json()["detail"], str)
+
+
+def test_update_booking_status_rejects_invalid_status_payload(client: TestClient) -> None:
+    created = client.post(
+        "/api/bookings/",
+        json={
+            "slot_start": datetime(2026, 1, 4, 11, 30).isoformat(),
+            "customer_name": "Invalid Enum Owner",
+            "customer_email": "invalid-enum-owner@example.com",
+        },
+    )
+    assert created.status_code == 201
+    booking_id = created.json()["id"]
+
+    response = client.patch(f"/api/bookings/{booking_id}/status", json={"status": "archived"})
+
+    assert response.status_code == 422
+    detail = response.json()["detail"]
+    assert isinstance(detail, list)
+    assert len(detail) >= 1
