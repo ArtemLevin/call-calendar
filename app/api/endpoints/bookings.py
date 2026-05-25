@@ -12,7 +12,13 @@ from app.exceptions import (
     InvalidBookingStatusTransitionError,
     SlotNotAvailableError,
 )
-from app.schemas.booking import BookingCreate, BookingResponse, BookingStatusUpdate, BookingUpcomingQuery
+from app.schemas.booking import (
+    BookingCreate,
+    BookingResponse,
+    BookingStatus,
+    BookingStatusUpdate,
+    BookingUpcomingQuery,
+)
 from app.services.booking_service import BookingService, get_utc_now_naive
 
 router = APIRouter(prefix="/api/bookings", tags=["bookings"])
@@ -51,6 +57,7 @@ async def create_booking(
 @router.get("/upcoming", response_model=list[BookingResponse])
 async def list_upcoming_bookings(
     from_ts: datetime | None = Query(default=None),
+    status_filter: BookingStatus | None = Query(default=None, alias="status"),
     limit: int = Query(default=20, ge=1, le=100),
     offset: int = Query(default=0, ge=0),
     service: BookingService = Depends(get_booking_service_dep),
@@ -59,6 +66,7 @@ async def list_upcoming_bookings(
     # clients get stable behavior even when they omit optional query parameters.
     query = BookingUpcomingQuery(
         from_ts=from_ts if from_ts is not None else get_utc_now_naive(),
+        status=status_filter,
         limit=limit,
         offset=offset,
     )
