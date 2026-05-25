@@ -39,6 +39,7 @@ class BookingService:
         )
         return await self.repository.list_upcoming(
             from_ts=normalized_query.from_ts,
+            status=normalized_query.status,
             limit=normalized_query.limit,
             offset=normalized_query.offset,
         )

@@ -38,6 +38,8 @@ These policies lock public behavior for client integrations and regression tests
 - API accepts ISO-8601 datetimes for booking payloads and query params.
 - Runtime storage uses **naive UTC** datetimes (`DateTime(timezone=False)`), so timezone-aware inputs are normalized by the application stack before persistence/query filtering.
 - For `/api/bookings/upcoming` without `from_ts`, the default boundary is current naive UTC time.
+- `/api/bookings/upcoming` optionally accepts `status` enum values to filter
+  owner-facing booking reads without changing sorting or pagination semantics.
 
 Why: consistent UTC normalization prevents mixed aware/naive comparison bugs and keeps pagination/filtering deterministic across clients.
 
