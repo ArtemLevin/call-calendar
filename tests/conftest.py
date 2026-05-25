@@ -5,7 +5,7 @@ import pytest
 import pytest_asyncio
 from sqlalchemy.ext.asyncio import AsyncEngine, AsyncSession, async_sessionmaker, create_async_engine
 
-from app.db.models import Booking
+from app.db.models import Booking, MeetingSettings
 from app.db.session import Base
 
 
@@ -34,6 +34,7 @@ async def db_session(test_engine: AsyncEngine) -> AsyncGenerator[AsyncSession, N
     async with session_factory() as session:
         # Why: cleaning mutable rows between tests keeps conflict/pagination checks
         # deterministic and eliminates hidden coupling through persistent state.
+        await session.execute(MeetingSettings.__table__.delete())
         await session.execute(Booking.__table__.delete())
         await session.commit()
         yield session

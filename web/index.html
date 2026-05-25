@@ -8,12 +8,19 @@
   </head>
   <body>
     <main class="booking-page">
+      <section class="hero" aria-label="Intro">
+        <p class="hero-kicker">Call Calendar</p>
+        <h1>Book polished meetings in seconds</h1>
+        <p class="hero-subtitle">
+          Pick a date, adjust meeting defaults, and confirm your slot with an interface designed for speed.
+        </p>
+      </section>
       <section class="top-controls" aria-label="Display controls">
         <button id="overlay-toggle" class="toggle" type="button" role="switch" aria-checked="true" aria-label="Overlay my calendar">
           <span class="toggle-knob"></span>
         </button>
         <span class="control-label">Overlay my calendar</span>
-        <button class="icon-btn" type="button" aria-label="Settings">⚙</button>
+        <button id="settings-button" class="icon-btn" type="button" aria-label="Settings">⚙</button>
         <button class="icon-btn is-active" type="button" aria-label="Calendar view" data-view="calendar">📅</button>
         <button class="icon-btn" type="button" aria-label="Grid view" data-view="grid">▦</button>
         <button class="icon-btn" type="button" aria-label="Columns view" data-view="columns">☰</button>
@@ -25,12 +32,17 @@
             <div class="avatar" aria-hidden="true">K</div>
             <p class="organizer-name">Kirill Mokevnin</p>
           </div>
-          <h1>30 Min Meeting</h1>
-          <ul class="meeting-meta">
-            <li>🕒 30m</li>
-            <li>🎥 Google Meet</li>
-            <li>🌐 Asia/Yekaterinburg ▾</li>
-          </ul>
+          <h1 id="meeting-title">30 Min Meeting</h1>
+          <div class="meeting-meta-controls">
+            <label for="meeting-duration-select">🕒 Duration</label>
+            <select id="meeting-duration-select" aria-label="Meeting duration"></select>
+
+            <label for="meeting-provider-select">🎥 Provider</label>
+            <select id="meeting-provider-select" aria-label="Meeting provider"></select>
+
+            <label for="meeting-timezone-select">🌐 Timezone</label>
+            <select id="meeting-timezone-select" aria-label="Meeting timezone"></select>
+          </div>
         </aside>
 
         <section class="calendar-panel" aria-label="Calendar panel">
@@ -69,7 +81,7 @@
         </section>
       </section>
 
-      <p class="brand">Cal.com</p>
+      <p class="brand">Call Calendar</p>
     </main>
 
     <script>

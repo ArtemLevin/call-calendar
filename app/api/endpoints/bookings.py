@@ -5,6 +5,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.db.repositories.booking_repository import BookingRepository
+from app.db.repositories.meeting_settings_repository import MeetingSettingsRepository
 from app.db.session import get_db_session
 from app.exceptions import (
     BookingNotFoundError,
@@ -12,7 +13,13 @@ from app.exceptions import (
     InvalidBookingStatusTransitionError,
     SlotNotAvailableError,
 )
-from app.schemas.booking import BookingCreate, BookingResponse, BookingStatusUpdate, BookingUpcomingQuery
+from app.schemas.booking import (
+    BookingCreate,
+    BookingResponse,
+    BookingStatus,
+    BookingStatusUpdate,
+    BookingUpcomingQuery,
+)
 from app.services.booking_service import BookingService, get_utc_now_naive
 
 router = APIRouter(prefix="/api/bookings", tags=["bookings"])
@@ -22,10 +29,17 @@ def get_booking_repository(db: AsyncSession = Depends(get_db_session)) -> Bookin
     return BookingRepository(session=db)
 
 
+def get_meeting_settings_repository(
+    db: AsyncSession = Depends(get_db_session),
+) -> MeetingSettingsRepository:
+    return MeetingSettingsRepository(session=db)
+
+
 def get_booking_service(
     repository: BookingRepository = Depends(get_booking_repository),
+    meeting_settings_repository: MeetingSettingsRepository = Depends(get_meeting_settings_repository),
 ) -> BookingService:
-    return BookingService(repository)
+    return BookingService(repository, meeting_settings_repository)
 
 
 def get_booking_service_dep(
@@ -51,6 +65,7 @@ async def create_booking(
 @router.get("/upcoming", response_model=list[BookingResponse])
 async def list_upcoming_bookings(
     from_ts: datetime | None = Query(default=None),
+    status_filter: BookingStatus | None = Query(default=None, alias="status"),
     limit: int = Query(default=20, ge=1, le=100),
     offset: int = Query(default=0, ge=0),
     service: BookingService = Depends(get_booking_service_dep),
@@ -59,6 +74,7 @@ async def list_upcoming_bookings(
     # clients get stable behavior even when they omit optional query parameters.
     query = BookingUpcomingQuery(
         from_ts=from_ts if from_ts is not None else get_utc_now_naive(),
+        status=status_filter,
         limit=limit,
         offset=offset,
     )
