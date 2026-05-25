@@ -42,8 +42,62 @@ def test_create_booking_success(client: TestClient) -> None:
         "customer_name",
         "customer_email",
         "status",
+        "meeting_provider",
+        "meeting_timezone",
+        "meeting_duration_minutes",
     }
     assert "created_at" not in body
+    assert body["meeting_provider"] == "google_meet"
+    assert body["meeting_timezone"] == "Asia/Yekaterinburg"
+    assert body["meeting_duration_minutes"] == 30
+
+
+def test_create_booking_accepts_explicit_meeting_metadata(client: TestClient) -> None:
+    response = client.post(
+        "/api/bookings/",
+        json={
+            "slot_start": datetime(2026, 1, 1, 10, 30).isoformat(),
+            "customer_name": "Alice",
+            "customer_email": "alice2@example.com",
+            "meeting_provider": "zoom",
+            "meeting_timezone": "UTC",
+            "meeting_duration_minutes": 30,
+        },
+    )
+
+    assert response.status_code == 201
+    body = response.json()
+    assert body["meeting_provider"] == "zoom"
+    assert body["meeting_timezone"] == "UTC"
+    assert body["meeting_duration_minutes"] == 30
+
+
+def test_create_booking_rejects_invalid_meeting_provider_422(client: TestClient) -> None:
+    response = client.post(
+        "/api/bookings/",
+        json={
+            "slot_start": datetime(2026, 1, 1, 12, 0).isoformat(),
+            "customer_name": "Alice",
+            "customer_email": "alice3@example.com",
+            "meeting_provider": "teams",
+        },
+    )
+
+    assert response.status_code == 422
+
+
+def test_create_booking_rejects_invalid_meeting_duration_422(client: TestClient) -> None:
+    response = client.post(
+        "/api/bookings/",
+        json={
+            "slot_start": datetime(2026, 1, 1, 12, 30).isoformat(),
+            "customer_name": "Alice",
+            "customer_email": "alice4@example.com",
+            "meeting_duration_minutes": 45,
+        },
+    )
+
+    assert response.status_code == 422
 
 
 def test_create_booking_conflict(client: TestClient) -> None:

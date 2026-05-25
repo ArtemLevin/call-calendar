@@ -28,6 +28,28 @@ async def test_create_booking_success(db_session: AsyncSession) -> None:
 
     assert booking.id >= 1
     assert booking.customer_name == "Alice"
+    assert booking.meeting_provider.value == "google_meet"
+    assert booking.meeting_timezone.value == "Asia/Yekaterinburg"
+    assert booking.meeting_duration_minutes.value == 30
+
+
+@pytest.mark.asyncio
+async def test_create_booking_persists_explicit_meeting_metadata(db_session: AsyncSession) -> None:
+    service = BookingService(BookingRepository(db_session))
+    payload = BookingCreate(
+        slot_start=datetime(2026, 1, 1, 10, 30),
+        customer_name="Alice",
+        customer_email="alice-meta@example.com",
+        meeting_provider="zoom",
+        meeting_timezone="UTC",
+        meeting_duration_minutes=30,
+    )
+
+    booking = await service.create_booking(payload)
+
+    assert booking.meeting_provider.value == "zoom"
+    assert booking.meeting_timezone.value == "UTC"
+    assert booking.meeting_duration_minutes.value == 30
 
 
 @pytest.mark.asyncio

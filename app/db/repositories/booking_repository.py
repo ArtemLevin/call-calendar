@@ -25,6 +25,9 @@ class BookingRepository:
             slot_start=data.slot_start,
             customer_name=data.customer_name,
             customer_email=str(data.customer_email),
+            meeting_provider=data.meeting_provider,
+            meeting_timezone=data.meeting_timezone,
+            meeting_duration_minutes=data.meeting_duration_minutes,
         )
         self.session.add(booking)
         # Why: slot conflicts are a write-time race condition, so we treat database

@@ -22,6 +22,31 @@ async def test_repository_create_and_get(db_session: AsyncSession) -> None:
 
     assert fetched is not None
     assert fetched.id == created.id
+    assert fetched.meeting_provider.value == "google_meet"
+    assert fetched.meeting_timezone.value == "Asia/Yekaterinburg"
+    assert fetched.meeting_duration_minutes.value == 30
+
+
+@pytest.mark.asyncio
+async def test_repository_create_persists_explicit_meeting_metadata(db_session: AsyncSession) -> None:
+    repo = BookingRepository(db_session)
+    created = await repo.create(
+        BookingCreate(
+            slot_start=datetime(2026, 1, 1, 9, 30),
+            customer_name="Repo Meta",
+            customer_email="repo-meta@example.com",
+            meeting_provider="phone",
+            meeting_timezone="UTC",
+            meeting_duration_minutes=30,
+        )
+    )
+
+    fetched = await repo.get_by_id(created.id)
+
+    assert fetched is not None
+    assert fetched.meeting_provider.value == "phone"
+    assert fetched.meeting_timezone.value == "UTC"
+    assert fetched.meeting_duration_minutes.value == 30
 
 
 @pytest.mark.asyncio

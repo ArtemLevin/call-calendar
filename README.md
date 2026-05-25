@@ -69,6 +69,7 @@ Use the browser UI to create bookings, inspect 409/422 error handling, and page 
   - `409` and `404` return a string `detail`;
   - `422` returns FastAPI/Pydantic validation details.
 - `BookingResponse` includes `id`, `slot_start`, `customer_name`, `customer_email`, `status`.
+  It also includes meeting metadata: `meeting_provider`, `meeting_timezone`, `meeting_duration_minutes`.
   `created_at` is intentionally internal DB metadata and is not part of the public response contract.
 
 ## Full-stack smoke check

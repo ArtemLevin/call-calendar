@@ -11,10 +11,30 @@ class BookingStatus(str, Enum):
     COMPLETED = "completed"
 
 
+class MeetingProvider(str, Enum):
+    GOOGLE_MEET = "google_meet"
+    ZOOM = "zoom"
+    PHONE = "phone"
+
+
+class MeetingTimezone(str, Enum):
+    ASIA_YEKATERINBURG = "Asia/Yekaterinburg"
+    UTC = "UTC"
+    EUROPE_BERLIN = "Europe/Berlin"
+    AMERICA_NEW_YORK = "America/New_York"
+
+
+class MeetingDurationMinutes(int, Enum):
+    THIRTY = 30
+
+
 class BookingCreate(BaseModel):
     slot_start: datetime
     customer_name: str = Field(min_length=2, max_length=255)
     customer_email: EmailStr
+    meeting_provider: MeetingProvider = MeetingProvider.GOOGLE_MEET
+    meeting_timezone: MeetingTimezone = MeetingTimezone.ASIA_YEKATERINBURG
+    meeting_duration_minutes: MeetingDurationMinutes = MeetingDurationMinutes.THIRTY
 
 
 class BookingUpcomingQuery(BaseModel):
@@ -34,5 +54,8 @@ class BookingResponse(BaseModel):
     customer_name: str
     customer_email: EmailStr
     status: BookingStatus
+    meeting_provider: MeetingProvider
+    meeting_timezone: MeetingTimezone
+    meeting_duration_minutes: MeetingDurationMinutes
 
     model_config = {"from_attributes": True}
