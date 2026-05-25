@@ -194,3 +194,28 @@ async def test_update_status_rejects_completed_to_pending(db_session: AsyncSessi
 
     with pytest.raises(InvalidBookingStatusTransitionError):
         await service.update_status(completed.id, BookingStatus.PENDING)
+
+
+@pytest.mark.asyncio
+async def test_update_status_is_idempotent_for_same_status(db_session: AsyncSession) -> None:
+    service = BookingService(BookingRepository(db_session))
+    created = await service.create_booking(
+        BookingCreate(
+            slot_start=datetime(2026, 1, 1, 12, 0),
+            customer_name="Idempotent",
+            customer_email="idempotent@example.com",
+        )
+    )
+
+    unchanged = await service.update_status(created.id, BookingStatus.PENDING)
+
+    assert unchanged.id == created.id
+    assert unchanged.status == BookingStatus.PENDING
+
+
+@pytest.mark.asyncio
+async def test_update_status_not_found_raises_booking_not_found(db_session: AsyncSession) -> None:
+    service = BookingService(BookingRepository(db_session))
+
+    with pytest.raises(BookingNotFoundError):
+        await service.update_status(booking_id=999999, new_status=BookingStatus.CONFIRMED)
