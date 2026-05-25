@@ -15,6 +15,7 @@ def test_root_serves_frontend_entrypoint() -> None:
     assert 'id="calendar-grid"' in response.text
     assert 'id="slot-list"' in response.text
     assert 'id="booking-form"' in response.text
+    assert 'id="settings-button"' in response.text
 
 
 def test_web_assets_are_served() -> None:
@@ -24,3 +25,5 @@ def test_web_assets_are_served() -> None:
 
     assert response.status_code == 200
     assert 'javascript' in response.headers['content-type']
+    assert "document.getElementById('settings-button')" in response.text
+    assert "settingsButton?.addEventListener('click'" in response.text
