@@ -1,7 +1,7 @@
 # Booking Calendar Service - Development Commands
 # ================================================
 
-.PHONY: setup setup-mirror setup-wheelhouse build-wheelhouse dev test lint typecheck migrate coverage clean help test-ci-mirror test-ci-wheelhouse smoke-fullstack
+.PHONY: setup setup-mirror setup-wheelhouse build-wheelhouse dev test lint typecheck migrate coverage clean help test-ci-mirror test-ci-wheelhouse smoke-fullstack migrate-smoke migration-drift-check
 
 # Configuration
 PYTHON := python3
@@ -108,6 +108,14 @@ migrate: ## Run database migrations
 migrate-test: ## Run migrations on test database
 	@echo "Running migrations on test database..."
 	TEST_DB=true $(ALEMBIC) upgrade head
+
+migrate-smoke: ## Run migration lifecycle smoke (upgrade + rollback cycle + schema sanity)
+	@echo "Running migration smoke..."
+	./scripts/migration_smoke.sh
+
+migration-drift-check: ## Fail when ORM metadata and migrations diverge
+	@echo "Checking migration drift..."
+	$(PYTHON) scripts/migration_drift_check.py
 
 migration-new: ## Create new migration (usage: make migration-new MSG="description")
 	@echo "Creating migration: $(MSG)"

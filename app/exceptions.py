@@ -16,3 +16,13 @@ class SlotNotAvailableError(BookingError):
     def __init__(self, slot_start: str):
         super().__init__(f"Slot {slot_start} is not available")
         self.slot_start = slot_start
+
+
+class InvalidBookingSlotError(BookingError):
+    """Raised when slot violates booking policy constraints."""
+
+    def __init__(self, slot_start: str):
+        super().__init__(
+            f"Slot {slot_start} must be aligned to 30-minute boundaries with zero seconds"
+        )
+        self.slot_start = slot_start
