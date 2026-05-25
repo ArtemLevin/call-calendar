@@ -29,6 +29,35 @@ Endpoint → Service → Repository → Model
 **Dependencies flow inward. Never upward.**
 
 
+## API Contract Policies (Stabilization)
+
+These policies lock public behavior for client integrations and regression tests.
+
+### Datetime / Timezone Policy
+
+- API accepts ISO-8601 datetimes for booking payloads and query params.
+- Runtime storage uses **naive UTC** datetimes (`DateTime(timezone=False)`), so timezone-aware inputs are normalized by the application stack before persistence/query filtering.
+- For `/api/bookings/upcoming` without `from_ts`, the default boundary is current naive UTC time.
+
+Why: consistent UTC normalization prevents mixed aware/naive comparison bugs and keeps pagination/filtering deterministic across clients.
+
+### Error Payload Policy
+
+- Domain conflicts return `409` with string `detail`.
+- Missing entities return `404` with string `detail`.
+- Validation failures return `422` with FastAPI/Pydantic validation details.
+
+Why: status code + payload shape stability protects frontend and external API clients from silent contract drift.
+
+### Booking Response Contract Policy
+
+- `BookingResponse` is intentionally limited to:
+  `id`, `slot_start`, `customer_name`, `customer_email`, `status`.
+- `created_at` remains internal persistence metadata and is not exposed in public API responses.
+
+Why: excluding internal metadata avoids accidental client coupling and allows future extension through versioned contracts when needed.
+
+
 ## Architecture Decision Checklist (before merge)
 
 - [ ] Endpoint layer contains only HTTP concerns (validation mapping, status codes, response serialization).

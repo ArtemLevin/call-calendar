@@ -27,6 +27,7 @@ body { margin: 0; font-family: Inter, -apple-system, BlinkMacSystemFont, 'Segoe 
 .booking-card { width: min(100%, 1020px); min-height: 410px; background: var(--card-bg); border: 1px solid var(--border); border-radius: var(--radius-card); box-shadow: var(--shadow-soft); display: grid; grid-template-columns: 27% 46% 27%; overflow: hidden; }
 .meeting-info, .calendar-panel, .slots-panel { padding: 24px; }
 .calendar-panel, .slots-panel { border-left: 1px solid var(--border); }
+.slots-panel { display: flex; flex-direction: column; min-height: 0; }
 .avatar { width: 24px; height: 24px; border-radius: 50%; background: #d1d5db; display: grid; place-items: center; font-size: 12px; font-weight: 600; }
 .organizer { display: flex; align-items: center; gap: 8px; }
 .organizer-name { margin: 0; color: var(--text-muted); font-size: 13px; }
@@ -48,6 +49,14 @@ body { margin: 0; font-family: Inter, -apple-system, BlinkMacSystemFont, 'Segoe 
 .format-toggle { display: inline-flex; border: 1px solid var(--border); border-radius: var(--radius-pill); padding: 2px; background: #f3f4f6; }
 .format-toggle button { border: 0; border-radius: var(--radius-pill); background: transparent; padding: 4px 8px; font-size: 12px; color: #6b7280; cursor: pointer; }
 .format-toggle button.is-active { background: #fff; color: #111827; }
+.slots-scroll {
+  flex: 1;
+  min-height: 220px;
+  max-height: 360px;
+  overflow-y: auto;
+  padding-right: 6px;
+  margin-right: -6px;
+}
 .slot-list { display: grid; gap: 10px; }
 .slot-button { min-height: 36px; border: 1px solid var(--slot-border); border-radius: 8px; background: #fff; display: flex; align-items: center; justify-content: center; gap: 8px; cursor: pointer; }
 .slot-button:hover { background: #f9fafb; }
@@ -66,3 +75,9 @@ body { margin: 0; font-family: Inter, -apple-system, BlinkMacSystemFont, 'Segoe 
 .booking-form input { min-height: 36px; border: 1px solid var(--border); border-radius: 8px; padding: 0 10px; }
 .book-button { min-height: 38px; border: 1px solid #111827; border-radius: 8px; background: #111827; color: #fff; cursor: pointer; }
 .book-button:hover { background: #1f2937; }
+
+@media (min-width: 768px) {
+  .booking-page { min-height: 100vh; }
+  .booking-card { height: min(78vh, 640px); }
+  .slots-scroll { max-height: none; }
+}

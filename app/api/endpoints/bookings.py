@@ -6,7 +6,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.db.repositories.booking_repository import BookingRepository
 from app.db.session import get_db_session
-from app.exceptions import BookingNotFoundError, SlotNotAvailableError
+from app.exceptions import BookingNotFoundError, InvalidBookingSlotError, SlotNotAvailableError
 from app.schemas.booking import BookingCreate, BookingResponse, BookingUpcomingQuery
 from app.services.booking_service import BookingService, get_utc_now_naive
 
@@ -36,6 +36,8 @@ async def create_booking(
 ) -> BookingResponse:
     try:
         booking = await service.create_booking(data)
+    except InvalidBookingSlotError as exc:
+        raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail=str(exc)) from exc
     except SlotNotAvailableError as exc:
         raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=str(exc)) from exc
     return BookingResponse.model_validate(booking)
@@ -69,5 +71,4 @@ async def get_booking(
     except BookingNotFoundError as exc:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(exc)) from exc
     return BookingResponse.model_validate(booking)
-
 
