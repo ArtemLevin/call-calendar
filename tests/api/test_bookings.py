@@ -162,3 +162,44 @@ def test_upcoming_contains_booked_slots_not_free_slots(client: TestClient) -> No
         },
     )
     assert conflict.status_code == 409
+
+
+def test_update_booking_status_success(client: TestClient) -> None:
+    created = client.post(
+        "/api/bookings/",
+        json={
+            "slot_start": datetime(2026, 1, 4, 10, 0).isoformat(),
+            "customer_name": "Status Owner",
+            "customer_email": "status-owner@example.com",
+        },
+    )
+    assert created.status_code == 201
+    booking_id = created.json()["id"]
+
+    updated = client.patch(
+        f"/api/bookings/{booking_id}/status",
+        json={"status": "confirmed"},
+    )
+
+    assert updated.status_code == 200
+    assert updated.json()["status"] == "confirmed"
+
+
+def test_update_booking_status_rejects_invalid_transition(client: TestClient) -> None:
+    created = client.post(
+        "/api/bookings/",
+        json={
+            "slot_start": datetime(2026, 1, 4, 10, 30).isoformat(),
+            "customer_name": "Status Owner",
+            "customer_email": "status-owner-2@example.com",
+        },
+    )
+    booking_id = created.json()["id"]
+    confirmed = client.patch(f"/api/bookings/{booking_id}/status", json={"status": "confirmed"})
+    assert confirmed.status_code == 200
+    completed = client.patch(f"/api/bookings/{booking_id}/status", json={"status": "completed"})
+    assert completed.status_code == 200
+
+    invalid = client.patch(f"/api/bookings/{booking_id}/status", json={"status": "pending"})
+    assert invalid.status_code == 409
+    assert "Cannot transition" in invalid.json()["detail"]

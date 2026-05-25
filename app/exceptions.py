@@ -26,3 +26,14 @@ class InvalidBookingSlotError(BookingError):
             f"Slot {slot_start} must be aligned to 30-minute boundaries with zero seconds"
         )
         self.slot_start = slot_start
+
+
+class InvalidBookingStatusTransitionError(BookingError):
+    """Raised when status transition violates booking state policy."""
+
+    def __init__(self, current_status: str, requested_status: str):
+        super().__init__(
+            f"Cannot transition booking status from {current_status} to {requested_status}"
+        )
+        self.current_status = current_status
+        self.requested_status = requested_status

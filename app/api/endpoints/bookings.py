@@ -6,8 +6,13 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.db.repositories.booking_repository import BookingRepository
 from app.db.session import get_db_session
-from app.exceptions import BookingNotFoundError, InvalidBookingSlotError, SlotNotAvailableError
-from app.schemas.booking import BookingCreate, BookingResponse, BookingUpcomingQuery
+from app.exceptions import (
+    BookingNotFoundError,
+    InvalidBookingSlotError,
+    InvalidBookingStatusTransitionError,
+    SlotNotAvailableError,
+)
+from app.schemas.booking import BookingCreate, BookingResponse, BookingStatusUpdate, BookingUpcomingQuery
 from app.services.booking_service import BookingService, get_utc_now_naive
 
 router = APIRouter(prefix="/api/bookings", tags=["bookings"])
@@ -72,3 +77,17 @@ async def get_booking(
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(exc)) from exc
     return BookingResponse.model_validate(booking)
 
+
+@router.patch("/{booking_id}/status", response_model=BookingResponse)
+async def update_booking_status(
+    booking_id: int,
+    data: BookingStatusUpdate,
+    service: BookingService = Depends(get_booking_service_dep),
+) -> BookingResponse:
+    try:
+        booking = await service.update_status(booking_id=booking_id, new_status=data.status)
+    except BookingNotFoundError as exc:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(exc)) from exc
+    except InvalidBookingStatusTransitionError as exc:
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=str(exc)) from exc
+    return BookingResponse.model_validate(booking)

@@ -5,8 +5,13 @@ import pytest
 from sqlalchemy.ext.asyncio import AsyncEngine, AsyncSession, async_sessionmaker
 
 from app.db.repositories.booking_repository import BookingRepository
-from app.exceptions import BookingNotFoundError, InvalidBookingSlotError, SlotNotAvailableError
-from app.schemas.booking import BookingCreate, BookingUpcomingQuery
+from app.exceptions import (
+    BookingNotFoundError,
+    InvalidBookingSlotError,
+    InvalidBookingStatusTransitionError,
+    SlotNotAvailableError,
+)
+from app.schemas.booking import BookingCreate, BookingStatus, BookingUpcomingQuery
 from app.services.booking_service import BookingService
 
 
@@ -156,3 +161,36 @@ async def test_list_upcoming_normalizes_timezone_aware_from_ts(db_session: Async
     )
 
     assert len(result) == 1
+
+
+@pytest.mark.asyncio
+async def test_update_status_allows_pending_to_confirmed(db_session: AsyncSession) -> None:
+    service = BookingService(BookingRepository(db_session))
+    created = await service.create_booking(
+        BookingCreate(
+            slot_start=datetime(2026, 1, 1, 11, 0),
+            customer_name="State",
+            customer_email="state@example.com",
+        )
+    )
+
+    updated = await service.update_status(created.id, BookingStatus.CONFIRMED)
+
+    assert updated.status == BookingStatus.CONFIRMED
+
+
+@pytest.mark.asyncio
+async def test_update_status_rejects_completed_to_pending(db_session: AsyncSession) -> None:
+    service = BookingService(BookingRepository(db_session))
+    created = await service.create_booking(
+        BookingCreate(
+            slot_start=datetime(2026, 1, 1, 11, 30),
+            customer_name="State",
+            customer_email="state2@example.com",
+        )
+    )
+    confirmed = await service.update_status(created.id, BookingStatus.CONFIRMED)
+    completed = await service.update_status(confirmed.id, BookingStatus.COMPLETED)
+
+    with pytest.raises(InvalidBookingStatusTransitionError):
+        await service.update_status(completed.id, BookingStatus.PENDING)
