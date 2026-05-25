@@ -25,12 +25,17 @@
             <div class="avatar" aria-hidden="true">K</div>
             <p class="organizer-name">Kirill Mokevnin</p>
           </div>
-          <h1>30 Min Meeting</h1>
-          <ul class="meeting-meta">
-            <li>🕒 30m</li>
-            <li>🎥 Google Meet</li>
-            <li>🌐 Asia/Yekaterinburg ▾</li>
-          </ul>
+          <h1 id="meeting-title">30 Min Meeting</h1>
+          <div class="meeting-meta-controls">
+            <label for="meeting-duration-select">🕒 Duration</label>
+            <select id="meeting-duration-select" aria-label="Meeting duration"></select>
+
+            <label for="meeting-provider-select">🎥 Provider</label>
+            <select id="meeting-provider-select" aria-label="Meeting provider"></select>
+
+            <label for="meeting-timezone-select">🌐 Timezone</label>
+            <select id="meeting-timezone-select" aria-label="Meeting timezone"></select>
+          </div>
         </aside>
 
         <section class="calendar-panel" aria-label="Calendar panel">

@@ -32,9 +32,9 @@ class BookingCreate(BaseModel):
     slot_start: datetime
     customer_name: str = Field(min_length=2, max_length=255)
     customer_email: EmailStr
-    meeting_provider: MeetingProvider = MeetingProvider.GOOGLE_MEET
-    meeting_timezone: MeetingTimezone = MeetingTimezone.ASIA_YEKATERINBURG
-    meeting_duration_minutes: MeetingDurationMinutes = MeetingDurationMinutes.THIRTY
+    meeting_provider: MeetingProvider | None = None
+    meeting_timezone: MeetingTimezone | None = None
+    meeting_duration_minutes: MeetingDurationMinutes | None = None
 
 
 class BookingUpcomingQuery(BaseModel):

@@ -9,6 +9,9 @@ from app.schemas.booking import BookingStatus, MeetingDurationMinutes, MeetingPr
 
 class Booking(Base):
     __tablename__ = "bookings"
+    DEFAULT_PROVIDER = MeetingProvider.GOOGLE_MEET
+    DEFAULT_TIMEZONE = MeetingTimezone.ASIA_YEKATERINBURG
+    DEFAULT_DURATION = MeetingDurationMinutes.THIRTY
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, index=True)
     slot_start: Mapped[datetime] = mapped_column(
@@ -27,17 +30,17 @@ class Booking(Base):
     meeting_provider: Mapped[MeetingProvider] = mapped_column(
         Enum(MeetingProvider, native_enum=False),
         nullable=False,
-        default=MeetingProvider.GOOGLE_MEET,
+        default=DEFAULT_PROVIDER,
     )
     meeting_timezone: Mapped[MeetingTimezone] = mapped_column(
         Enum(MeetingTimezone, native_enum=False),
         nullable=False,
-        default=MeetingTimezone.ASIA_YEKATERINBURG,
+        default=DEFAULT_TIMEZONE,
     )
     meeting_duration_minutes: Mapped[MeetingDurationMinutes] = mapped_column(
         Enum(MeetingDurationMinutes, native_enum=False),
         nullable=False,
-        default=MeetingDurationMinutes.THIRTY,
+        default=DEFAULT_DURATION,
     )
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=False),

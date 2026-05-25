@@ -100,6 +100,32 @@ def test_create_booking_rejects_invalid_meeting_duration_422(client: TestClient)
     assert response.status_code == 422
 
 
+def test_create_booking_uses_updated_meeting_settings_defaults(client: TestClient) -> None:
+    patched = client.patch(
+        "/api/meeting-settings",
+        json={
+            "meeting_provider": "zoom",
+            "meeting_timezone": "UTC",
+            "meeting_duration_minutes": 30,
+        },
+    )
+    assert patched.status_code == 200
+
+    response = client.post(
+        "/api/bookings/",
+        json={
+            "slot_start": datetime(2026, 1, 1, 13, 0).isoformat(),
+            "customer_name": "Settings Default",
+            "customer_email": "settings-default@example.com",
+        },
+    )
+    assert response.status_code == 201
+    body = response.json()
+    assert body["meeting_provider"] == "zoom"
+    assert body["meeting_timezone"] == "UTC"
+    assert body["meeting_duration_minutes"] == 30
+
+
 def test_create_booking_conflict(client: TestClient) -> None:
     payload = {
         "slot_start": datetime(2026, 1, 1, 11, 0).isoformat(),

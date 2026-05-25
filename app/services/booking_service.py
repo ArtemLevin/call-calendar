@@ -2,6 +2,7 @@ from datetime import datetime, timezone
 
 from app.db.models.booking import Booking
 from app.db.repositories.booking_repository import BookingRepository
+from app.db.repositories.meeting_settings_repository import MeetingSettingsRepository
 from app.exceptions import (
     BookingNotFoundError,
     InvalidBookingSlotError,
@@ -18,13 +19,41 @@ class BookingService:
         BookingStatus.COMPLETED: set(),
     }
 
-    def __init__(self, repository: BookingRepository) -> None:
+    def __init__(
+        self,
+        repository: BookingRepository,
+        meeting_settings_repository: MeetingSettingsRepository,
+    ) -> None:
         self.repository = repository
+        self.meeting_settings_repository = meeting_settings_repository
 
     async def create_booking(self, data: BookingCreate) -> Booking:
         normalized_slot_start = self._normalize_to_utc_naive(data.slot_start)
         self._ensure_slot_policy(normalized_slot_start)
-        normalized_data = data.model_copy(update={"slot_start": normalized_slot_start})
+        settings = await self.meeting_settings_repository.get()
+        meeting_provider = (
+            data.meeting_provider
+            if data.meeting_provider is not None
+            else settings.meeting_provider if settings is not None else Booking.DEFAULT_PROVIDER
+        )
+        meeting_timezone = (
+            data.meeting_timezone
+            if data.meeting_timezone is not None
+            else settings.meeting_timezone if settings is not None else Booking.DEFAULT_TIMEZONE
+        )
+        meeting_duration = (
+            data.meeting_duration_minutes
+            if data.meeting_duration_minutes is not None
+            else settings.meeting_duration_minutes if settings is not None else Booking.DEFAULT_DURATION
+        )
+        normalized_data = data.model_copy(
+            update={
+                "slot_start": normalized_slot_start,
+                "meeting_provider": meeting_provider,
+                "meeting_timezone": meeting_timezone,
+                "meeting_duration_minutes": meeting_duration,
+            }
+        )
         return await self.repository.create(normalized_data)
 
     async def get_by_id(self, booking_id: int) -> Booking:
