@@ -59,6 +59,16 @@ API will be available at `http://localhost:8000` and SQLite data persists in the
 Frontend baseline is served from the same app at `http://localhost:8000/`.
 Use the browser UI to create bookings, inspect 409/422 error handling, and page through upcoming bookings.
 
+## API contract notes (stabilized)
+
+- Datetime inputs use ISO-8601. The service stores and operates on naive UTC datetimes.
+- `GET /api/bookings/upcoming` uses current naive UTC when `from_ts` is omitted.
+- Error contracts:
+  - `409` and `404` return a string `detail`;
+  - `422` returns FastAPI/Pydantic validation details.
+- `BookingResponse` includes `id`, `slot_start`, `customer_name`, `customer_email`, `status`.
+  `created_at` is intentionally internal DB metadata and is not part of the public response contract.
+
 ## Full-stack smoke check
 
 Run a repeatable integration smoke that validates compose startup and key user/API flows:

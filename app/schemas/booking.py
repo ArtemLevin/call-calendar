@@ -23,6 +23,10 @@ class BookingUpcomingQuery(BaseModel):
     offset: int = Field(default=0, ge=0)
 
 
+class BookingStatusUpdate(BaseModel):
+    status: BookingStatus
+
+
 class BookingResponse(BaseModel):
     id: int
     slot_start: datetime

@@ -59,3 +59,9 @@ class BookingRepository:
         )
         result = await self.session.execute(stmt)
         return list(result.scalars().all())
+
+    async def save(self, booking: Booking) -> Booking:
+        self.session.add(booking)
+        await self.session.commit()
+        await self.session.refresh(booking)
+        return booking
