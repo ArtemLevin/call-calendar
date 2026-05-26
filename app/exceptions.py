@@ -37,3 +37,11 @@ class InvalidBookingStatusTransitionError(BookingError):
         )
         self.current_status = current_status
         self.requested_status = requested_status
+
+
+class ColleagueNotFoundError(BookingError):
+    """Raised when colleague is not found."""
+
+    def __init__(self, colleague_id: int):
+        super().__init__(f"Colleague with id={colleague_id} not found")
+        self.colleague_id = colleague_id
