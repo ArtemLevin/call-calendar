@@ -69,6 +69,11 @@ Use the browser UI to create bookings, inspect 409/422 error handling, and page 
   - `GET /api/meeting-metadata/options`
   - `GET /api/meeting-settings`
   - `PATCH /api/meeting-settings`
+- Colleague contracts (stage 2/3):
+  - `GET /api/colleagues?limit=<1..200>&offset=<>=0`
+  - `GET /api/colleagues/{colleague_id}/availability?from_ts=...&to_ts=...`
+  - availability returns `404` for unknown colleague and `422` when `to_ts <= from_ts`
+  - booking creation accepts optional `colleague_id`; when omitted, backend assigns default colleague (id=1).
 - Error contracts:
   - `409` and `404` return a string `detail`;
   - `422` returns FastAPI/Pydantic validation details.
@@ -95,3 +100,22 @@ Performance budgets used by smoke defaults:
 - root page: 1500ms;
 - create request: 2000ms;
 - upcoming request: 2000ms.
+
+
+## Seed fake data for manual QA
+
+```bash
+make migrate
+make seed-fake-data
+```
+
+Optional flags can be passed directly to the script:
+
+```bash
+python3 scripts/seed_fake_data.py --colleagues 10 --days 30 --bookings-per-colleague 40 --seed 123
+```
+
+
+## Database path note
+
+By default the app uses an absolute SQLite path resolved from the repository root (`call_calendar.db`). This avoids running the app and seeding against different DB files when commands are launched from different working directories.
