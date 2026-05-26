@@ -49,6 +49,19 @@ def upgrade() -> None:
 
 
 def downgrade() -> None:
+    # Why: older schema enforces global unique(slot_start), so we must collapse
+    # per-colleague duplicates before recreating that unique index in downgrade.
+    op.execute(
+        """
+        DELETE FROM bookings
+        WHERE id NOT IN (
+            SELECT MIN(id)
+            FROM bookings
+            GROUP BY slot_start
+        )
+        """
+    )
+
     with op.batch_alter_table("bookings") as batch_op:
         batch_op.drop_constraint("uq_bookings_colleague_slot_start", type_="unique")
         batch_op.drop_constraint("fk_bookings_colleague_id_colleagues", type_="foreignkey")
