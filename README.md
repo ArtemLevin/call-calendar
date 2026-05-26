@@ -114,3 +114,8 @@ Optional flags can be passed directly to the script:
 ```bash
 python3 scripts/seed_fake_data.py --colleagues 10 --days 30 --bookings-per-colleague 40 --seed 123
 ```
+
+
+## Database path note
+
+By default the app uses an absolute SQLite path resolved from the repository root (`call_calendar.db`). This avoids running the app and seeding against different DB files when commands are launched from different working directories.
