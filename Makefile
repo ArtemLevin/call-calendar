@@ -1,7 +1,7 @@
 # Booking Calendar Service - Development Commands
 # ================================================
 
-.PHONY: setup setup-mirror setup-wheelhouse build-wheelhouse dev test lint typecheck migrate coverage clean help test-ci-mirror test-ci-wheelhouse smoke-fullstack migrate-smoke migration-drift-check seed-fake-data
+.PHONY: setup setup-mirror setup-wheelhouse build-wheelhouse dev test lint typecheck migrate coverage clean help test-ci-mirror test-ci-wheelhouse smoke-fullstack migrate-smoke migration-drift-check seed-fake-data seed-fake-data-docker docker-db-info
 
 # Configuration
 PYTHON := python3
@@ -189,6 +189,15 @@ seed-fake-data: ## Populate DB with fake colleagues/bookings for manual QA
 	@echo "Seeding fake data..."
 	$(PYTHON) scripts/seed_fake_data.py --reset --colleagues 6 --bookings-per-colleague 24 --days 21
 
+
+seed-fake-data-docker: ## Populate Docker API DB volume with fake colleagues/bookings
+	@echo "Seeding fake data inside Docker service 'api'..."
+	docker compose exec api python scripts/seed_fake_data.py --reset --colleagues 6 --bookings-per-colleague 24 --days 21
+
+
+docker-db-info: ## Show DB URL and colleague count from running Docker API container
+	@echo "Inspecting DB state inside Docker service 'api'..."
+	docker compose exec api python -c "from app.db.session import DATABASE_URL; from sqlalchemy import create_engine,text; print(f'DATABASE_URL={DATABASE_URL}'); e=create_engine(DATABASE_URL.replace('+aiosqlite','')); c=e.connect(); n=c.execute(text('SELECT COUNT(*) FROM colleagues')).scalar_one(); c.close(); print(f'colleagues={n}')"
 # =============================================================================
 # Help
 # =============================================================================

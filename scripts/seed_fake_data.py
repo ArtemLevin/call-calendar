@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import argparse
 import asyncio
-from datetime import datetime, timedelta
+from datetime import UTC, datetime, timedelta
 from pathlib import Path
 import random
 import sys
@@ -79,7 +79,9 @@ async def _seed(colleagues: int, days: int, bookings_per_colleague: int, reset: 
             raise RuntimeError(f"Expected at least {colleagues} colleagues after seed, got {len(colleague_ids)}")
         status_pool = [BookingStatus.PENDING, BookingStatus.CONFIRMED, BookingStatus.CANCELLED, BookingStatus.COMPLETED]
 
-        start_day = datetime.utcnow().replace(hour=0, minute=0, second=0, microsecond=0)
+        # Why: aware UTC now avoids deprecated utcnow() behavior while still
+        # producing naive UTC slots expected by current persistence contract.
+        start_day = datetime.now(UTC).replace(tzinfo=None, hour=0, minute=0, second=0, microsecond=0)
         slot_candidates: list[datetime] = []
         for day_offset in range(days):
             current_day = start_day + timedelta(days=day_offset)

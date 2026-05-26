@@ -119,3 +119,19 @@ python3 scripts/seed_fake_data.py --colleagues 10 --days 30 --bookings-per-colle
 ## Database path note
 
 By default the app uses an absolute SQLite path resolved from the repository root (`call_calendar.db`). This avoids running the app and seeding against different DB files when commands are launched from different working directories.
+
+
+## Docker-first seeding and DB checks
+
+When running the API in Docker (`docker compose up`), seed inside the `api` service so
+fake data lands in the same `/data/call_calendar.db` volume used by the running API:
+
+```bash
+make seed-fake-data-docker
+```
+
+Quickly verify what DB the container is using and how many colleagues are stored:
+
+```bash
+make docker-db-info
+```
