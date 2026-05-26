@@ -69,6 +69,10 @@ Use the browser UI to create bookings, inspect 409/422 error handling, and page 
   - `GET /api/meeting-metadata/options`
   - `GET /api/meeting-settings`
   - `PATCH /api/meeting-settings`
+- Colleague contracts (stage 1):
+  - `GET /api/colleagues`
+  - `GET /api/colleagues/{colleague_id}/availability?from_ts=...&to_ts=...`
+  - booking creation accepts optional `colleague_id`; when omitted, backend assigns default colleague (id=1).
 - Error contracts:
   - `409` and `404` return a string `detail`;
   - `422` returns FastAPI/Pydantic validation details.
