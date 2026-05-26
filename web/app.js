@@ -18,19 +18,21 @@ const meetingTitle = document.getElementById('meeting-title');
 const meetingDurationSelect = document.getElementById('meeting-duration-select');
 const meetingProviderSelect = document.getElementById('meeting-provider-select');
 const meetingTimezoneSelect = document.getElementById('meeting-timezone-select');
+const colleagueSelect = document.getElementById('colleague-select');
+const colleagueAvatar = document.getElementById('colleague-avatar');
 
 let currentMonth = new Date();
 let selectedDate = null;
 let selectedTime = null;
 let timeFormat = '24h';
 let availableSlots = {};
+let colleagues = [];
+let selectedColleague = null;
 let meetingSettings = {
   meeting_provider: 'google_meet',
   meeting_timezone: 'Asia/Yekaterinburg',
   meeting_duration_minutes: 30,
 };
-const WORKDAY_START_HOUR = 9;
-const WORKDAY_END_HOUR = 18;
 
 function ymd(date) {
   return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
@@ -72,32 +74,18 @@ function renderMeetingSettings() {
   }
 }
 
-async function loadMeetingSettings() {
+async function loadGlobalMeetingSettings() {
   const [optionsResponse, settingsResponse] = await Promise.all([
     fetch(`${config.API_BASE_URL}/meeting-metadata/options`),
     fetch(`${config.API_BASE_URL}/meeting-settings`),
   ]);
   const optionsPayload = await parseJsonSafe(optionsResponse);
   const settingsPayload = await parseJsonSafe(settingsResponse);
-  if (!optionsResponse.ok) {
-    throw new Error(formatErrorMessage(optionsResponse, optionsPayload));
-  }
-  if (!settingsResponse.ok) {
-    throw new Error(formatErrorMessage(settingsResponse, settingsPayload));
-  }
+  if (!optionsResponse.ok) throw new Error(formatErrorMessage(optionsResponse, optionsPayload));
+  if (!settingsResponse.ok) throw new Error(formatErrorMessage(settingsResponse, settingsPayload));
 
   meetingSettings = settingsPayload;
-  populateSelect(
-    meetingProviderSelect,
-    optionsPayload.meeting_provider_options,
-    settingsPayload.meeting_provider,
-    providerLabel,
-  );
-  populateSelect(
-    meetingTimezoneSelect,
-    optionsPayload.meeting_timezone_options,
-    settingsPayload.meeting_timezone,
-  );
+  populateSelect(meetingTimezoneSelect, optionsPayload.meeting_timezone_options, settingsPayload.meeting_timezone);
   populateSelect(
     meetingDurationSelect,
     optionsPayload.meeting_duration_minutes_options,
@@ -107,26 +95,48 @@ async function loadMeetingSettings() {
   renderMeetingSettings();
 }
 
-async function saveMeetingSettings() {
-  const body = {
-    meeting_provider: meetingProviderSelect?.value ?? meetingSettings.meeting_provider,
-    meeting_timezone: meetingTimezoneSelect?.value ?? meetingSettings.meeting_timezone,
-    meeting_duration_minutes: Number(
-      meetingDurationSelect?.value ?? meetingSettings.meeting_duration_minutes,
-    ),
+function applyColleagueToMeetingSettings() {
+  if (!selectedColleague) return;
+  meetingSettings = {
+    ...meetingSettings,
+    meeting_provider: selectedColleague.default_meeting_provider,
+    meeting_timezone: selectedColleague.timezone,
+    meeting_duration_minutes: selectedColleague.meeting_duration_minutes,
   };
-  const response = await fetch(`${config.API_BASE_URL}/meeting-settings`, {
-    method: 'PATCH',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(body),
-  });
-  const payload = await parseJsonSafe(response);
-  if (!response.ok) {
-    throw new Error(formatErrorMessage(response, payload));
-  }
-  meetingSettings = payload;
+  populateSelect(
+    meetingProviderSelect,
+    selectedColleague.contact_options,
+    meetingSettings.meeting_provider,
+    providerLabel,
+  );
+  populateSelect(meetingTimezoneSelect, [selectedColleague.timezone], meetingSettings.meeting_timezone);
+  populateSelect(
+    meetingDurationSelect,
+    [selectedColleague.meeting_duration_minutes],
+    meetingSettings.meeting_duration_minutes,
+    (value) => `${value}m`,
+  );
   renderMeetingSettings();
-  bookingResult.textContent = 'Meeting settings saved.';
+}
+
+async function loadColleagues() {
+  const response = await fetch(`${config.API_BASE_URL}/colleagues/`);
+  const payload = await parseJsonSafe(response);
+  if (!response.ok) throw new Error(formatErrorMessage(response, payload));
+  colleagues = payload;
+  if (colleagues.length === 0) throw new Error('No colleagues available for booking.');
+
+  const selectedId = selectedColleague?.id ?? colleagues[0].id;
+  selectedColleague = colleagues.find((item) => item.id === selectedId) ?? colleagues[0];
+
+  populateSelect(colleagueSelect, colleagues.map((item) => item.id), selectedColleague.id, (value) => {
+    const colleague = colleagues.find((item) => item.id === Number(value));
+    return colleague ? colleague.name : String(value);
+  });
+  if (colleagueAvatar && selectedColleague.name.length > 0) {
+    colleagueAvatar.textContent = selectedColleague.name[0].toUpperCase();
+  }
+  applyColleagueToMeetingSettings();
 }
 
 function formatSlot(time24) {
@@ -139,29 +149,6 @@ function formatSlot(time24) {
 
 function slotsForDate(dateKey) {
   return availableSlots[dateKey] ?? [];
-}
-
-function enumerateBookableSlotsInMonth(monthDate) {
-  const y = monthDate.getFullYear();
-  const m = monthDate.getMonth();
-  const daysInMonth = new Date(y, m + 1, 0).getDate();
-  const slotsByDate = {};
-
-  for (let day = 1; day <= daysInMonth; day += 1) {
-    const date = new Date(y, m, day);
-    const isWeekend = date.getDay() === 0 || date.getDay() === 6;
-    if (isWeekend) continue;
-
-    const key = ymd(date);
-    slotsByDate[key] = [];
-
-    for (let hour = WORKDAY_START_HOUR; hour < WORKDAY_END_HOUR; hour += 1) {
-      slotsByDate[key].push(`${String(hour).padStart(2, '0')}:00`);
-      slotsByDate[key].push(`${String(hour).padStart(2, '0')}:30`);
-    }
-  }
-
-  return slotsByDate;
 }
 
 function renderSlots() {
@@ -237,37 +224,27 @@ function toIsoLocal(slotDate, slotTime) {
   return `${slotDate}T${slotTime}:00`;
 }
 
-async function loadUpcoming() {
-  const fromTs = new Date(currentMonth.getFullYear(), currentMonth.getMonth(), 1).toISOString().slice(0, 19);
-  const response = await fetch(`${config.API_BASE_URL}/bookings/upcoming?from_ts=${encodeURIComponent(fromTs)}&limit=100&offset=0`);
+async function loadAvailability() {
+  if (!selectedColleague) return;
+  const monthStart = new Date(currentMonth.getFullYear(), currentMonth.getMonth(), 1, 0, 0, 0);
+  const monthEnd = new Date(currentMonth.getFullYear(), currentMonth.getMonth() + 1, 1, 0, 0, 0);
+  const response = await fetch(
+    `${config.API_BASE_URL}/colleagues/${selectedColleague.id}/availability?from_ts=${encodeURIComponent(monthStart.toISOString().slice(0, 19))}&to_ts=${encodeURIComponent(monthEnd.toISOString().slice(0, 19))}`,
+  );
   const payload = await parseJsonSafe(response);
-  if (!response.ok) {
-    throw new Error(formatErrorMessage(response, payload));
-  }
+  if (!response.ok) throw new Error(formatErrorMessage(response, payload));
 
-  const bookedSlots = {};
-  for (const booking of payload) {
-    const [datePart, timePart] = booking.slot_start.split('T');
+  availableSlots = {};
+  for (const slot of payload.slots) {
+    const [datePart, timePart] = slot.slot_start.split('T');
     const slotTime = (timePart ?? '').slice(0, 5);
-    if (!slotTime) continue;
-    if (!bookedSlots[datePart]) {
-      bookedSlots[datePart] = [];
-    }
-    if (!bookedSlots[datePart].includes(slotTime)) {
-      bookedSlots[datePart].push(slotTime);
-    }
+    if (!datePart || !slotTime) continue;
+    if (!availableSlots[datePart]) availableSlots[datePart] = [];
+    availableSlots[datePart].push(slotTime);
   }
-
-  availableSlots = enumerateBookableSlotsInMonth(currentMonth);
 
   for (const dateKey of Object.keys(availableSlots)) {
-    const dayBooked = new Set(bookedSlots[dateKey] ?? []);
-    availableSlots[dateKey] = availableSlots[dateKey].filter((slot) => !dayBooked.has(slot));
     availableSlots[dateKey].sort();
-
-    if (availableSlots[dateKey].length === 0) {
-      delete availableSlots[dateKey];
-    }
   }
 
   const firstDate = Object.keys(availableSlots).sort()[0] ?? null;
@@ -284,8 +261,8 @@ async function loadUpcoming() {
 bookingForm?.addEventListener('submit', async (event) => {
   event.preventDefault();
   bookingResult.textContent = '';
-  if (!selectedDate || !selectedTime) {
-    bookingResult.textContent = 'Select date and time first.';
+  if (!selectedDate || !selectedTime || !selectedColleague) {
+    bookingResult.textContent = 'Select colleague, date, and time first.';
     return;
   }
 
@@ -296,6 +273,7 @@ bookingForm?.addEventListener('submit', async (event) => {
     meeting_provider: meetingSettings.meeting_provider,
     meeting_timezone: meetingSettings.meeting_timezone,
     meeting_duration_minutes: meetingSettings.meeting_duration_minutes,
+    colleague_id: selectedColleague.id,
   };
 
   const response = await fetch(`${config.API_BASE_URL}/bookings/`, {
@@ -311,7 +289,27 @@ bookingForm?.addEventListener('submit', async (event) => {
   }
 
   bookingResult.textContent = `Booking #${payload.id} created.`;
-  await loadUpcoming();
+  await loadAvailability();
+});
+
+colleagueSelect?.addEventListener('change', async () => {
+  const selectedId = Number(colleagueSelect.value);
+  selectedColleague = colleagues.find((item) => item.id === selectedId) ?? null;
+  if (!selectedColleague) {
+    bookingResult.textContent = 'Selected colleague is unavailable.';
+    return;
+  }
+  if (colleagueAvatar && selectedColleague.name.length > 0) {
+    colleagueAvatar.textContent = selectedColleague.name[0].toUpperCase();
+  }
+  selectedTime = null;
+  selectedDate = null;
+  applyColleagueToMeetingSettings();
+  try {
+    await loadAvailability();
+  } catch (error) {
+    bookingResult.textContent = error.message;
+  }
 });
 
 overlayToggle?.addEventListener('click', () => {
@@ -320,25 +318,7 @@ overlayToggle?.addEventListener('click', () => {
 });
 
 settingsButton?.addEventListener('click', () => {
-  meetingProviderSelect?.focus();
-});
-
-meetingProviderSelect?.addEventListener('change', () => {
-  saveMeetingSettings().catch((error) => {
-    bookingResult.textContent = error.message;
-  });
-});
-
-meetingTimezoneSelect?.addEventListener('change', () => {
-  saveMeetingSettings().catch((error) => {
-    bookingResult.textContent = error.message;
-  });
-});
-
-meetingDurationSelect?.addEventListener('change', () => {
-  saveMeetingSettings().catch((error) => {
-    bookingResult.textContent = error.message;
-  });
+  colleagueSelect?.focus();
 });
 
 viewButtons.forEach((btn) => {
@@ -350,12 +330,12 @@ viewButtons.forEach((btn) => {
 
 prevMonth?.addEventListener('click', async () => {
   currentMonth = new Date(currentMonth.getFullYear(), currentMonth.getMonth() - 1, 1);
-  await loadUpcoming();
+  await loadAvailability();
 });
 
 nextMonth?.addEventListener('click', async () => {
   currentMonth = new Date(currentMonth.getFullYear(), currentMonth.getMonth() + 1, 1);
-  await loadUpcoming();
+  await loadAvailability();
 });
 
 format12h?.addEventListener('click', () => {
@@ -376,7 +356,8 @@ format24h?.addEventListener('click', () => {
   renderSlots();
 });
 
-Promise.all([loadMeetingSettings(), loadUpcoming()])
+Promise.all([loadGlobalMeetingSettings(), loadColleagues()])
+  .then(() => loadAvailability())
   .catch((error) => {
     bookingResult.textContent = error.message;
   })
