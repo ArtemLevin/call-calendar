@@ -2,6 +2,7 @@
 
 from collections.abc import AsyncGenerator
 import os
+from pathlib import Path
 
 from sqlalchemy.ext.asyncio import (
     AsyncSession,
@@ -11,7 +12,8 @@ from sqlalchemy.ext.asyncio import (
 from sqlalchemy.orm import DeclarativeBase
 
 
-DEFAULT_DATABASE_URL = "sqlite+aiosqlite:///./call_calendar.db"
+REPO_ROOT = Path(__file__).resolve().parents[2]
+DEFAULT_DATABASE_URL = f"sqlite+aiosqlite:///{REPO_ROOT / 'call_calendar.db'}"
 DATABASE_URL = os.getenv("DATABASE_URL", DEFAULT_DATABASE_URL)
 
 
