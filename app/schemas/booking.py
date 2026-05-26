@@ -35,6 +35,7 @@ class BookingCreate(BaseModel):
     meeting_provider: MeetingProvider | None = None
     meeting_timezone: MeetingTimezone | None = None
     meeting_duration_minutes: MeetingDurationMinutes | None = None
+    colleague_id: int | None = Field(default=None, ge=1)
 
 
 class BookingUpcomingQuery(BaseModel):

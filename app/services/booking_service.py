@@ -2,6 +2,7 @@ from datetime import datetime, timezone
 
 from app.db.models.booking import Booking
 from app.db.repositories.booking_repository import BookingRepository
+from app.db.repositories.colleague_repository import ColleagueRepository
 from app.db.repositories.meeting_settings_repository import MeetingSettingsRepository
 from app.exceptions import (
     BookingNotFoundError,
@@ -23,9 +24,11 @@ class BookingService:
         self,
         repository: BookingRepository,
         meeting_settings_repository: MeetingSettingsRepository,
+        colleague_repository: ColleagueRepository,
     ) -> None:
         self.repository = repository
         self.meeting_settings_repository = meeting_settings_repository
+        self.colleague_repository = colleague_repository
 
     async def create_booking(self, data: BookingCreate) -> Booking:
         normalized_slot_start = self._normalize_to_utc_naive(data.slot_start)
@@ -46,12 +49,14 @@ class BookingService:
             if data.meeting_duration_minutes is not None
             else settings.meeting_duration_minutes if settings is not None else Booking.DEFAULT_DURATION
         )
+        default_colleague_id = data.colleague_id if data.colleague_id is not None else ColleagueRepository.DEFAULT_COLLEAGUE_ID
         normalized_data = data.model_copy(
             update={
                 "slot_start": normalized_slot_start,
                 "meeting_provider": meeting_provider,
                 "meeting_timezone": meeting_timezone,
                 "meeting_duration_minutes": meeting_duration,
+                "colleague_id": default_colleague_id,
             }
         )
         return await self.repository.create(normalized_data)
