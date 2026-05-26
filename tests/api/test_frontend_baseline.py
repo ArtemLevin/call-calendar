@@ -19,6 +19,7 @@ def test_root_serves_frontend_entrypoint() -> None:
     assert 'id="meeting-duration-select"' in response.text
     assert 'id="meeting-provider-select"' in response.text
     assert 'id="meeting-timezone-select"' in response.text
+    assert 'Kirill Mokevnin' in response.text
 
 
 def test_web_assets_are_served() -> None:
