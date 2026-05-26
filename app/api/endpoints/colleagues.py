@@ -37,9 +37,11 @@ def get_colleague_service_dep(
 
 @router.get("/", response_model=list[ColleagueResponse])
 async def list_colleagues(
+    limit: int = Query(default=50, ge=1, le=200),
+    offset: int = Query(default=0, ge=0),
     service: ColleagueService = Depends(get_colleague_service_dep),
 ) -> list[ColleagueResponse]:
-    return await service.list_colleagues()
+    return await service.list_colleagues(limit=limit, offset=offset)
 
 
 @router.get("/{colleague_id}/availability", response_model=ColleagueAvailabilityResponse)

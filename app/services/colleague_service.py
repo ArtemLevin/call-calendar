@@ -19,8 +19,8 @@ class ColleagueService:
         self.repository = repository
         self.booking_repository = booking_repository
 
-    async def list_colleagues(self) -> list[ColleagueResponse]:
-        rows = await self.repository.list_all()
+    async def list_colleagues(self, limit: int, offset: int) -> list[ColleagueResponse]:
+        rows = await self.repository.list_all(limit=limit, offset=offset)
         return [
             ColleagueResponse(
                 id=row.id,

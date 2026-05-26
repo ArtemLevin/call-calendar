@@ -56,3 +56,43 @@ def test_get_colleague_availability_rejects_invalid_range(client: TestClient) ->
     )
 
     assert response.status_code == 422
+
+
+def test_list_colleagues_supports_empty_page_with_offset(client: TestClient) -> None:
+    response = client.get("/api/colleagues/", params={"limit": 50, "offset": 999})
+
+    assert response.status_code == 200
+    assert response.json() == []
+
+
+def test_list_colleagues_rejects_invalid_limit(client: TestClient) -> None:
+    response = client.get("/api/colleagues/", params={"limit": 0, "offset": 0})
+
+    assert response.status_code == 422
+
+
+def test_get_colleague_availability_returns_404_for_unknown_colleague(client: TestClient) -> None:
+    response = client.get(
+        "/api/colleagues/999/availability",
+        params={
+            "from_ts": datetime(2026, 1, 1, 0, 0).isoformat(),
+            "to_ts": datetime(2026, 1, 2, 0, 0).isoformat(),
+        },
+    )
+
+    assert response.status_code == 404
+
+
+def test_get_colleague_availability_can_return_empty_slots(client: TestClient) -> None:
+    response = client.get(
+        "/api/colleagues/1/availability",
+        params={
+            "from_ts": datetime(2026, 1, 3, 0, 0).isoformat(),
+            "to_ts": datetime(2026, 1, 4, 0, 0).isoformat(),
+        },
+    )
+
+    assert response.status_code == 200
+    payload = response.json()
+    assert payload["colleague_id"] == 1
+    assert payload["slots"] == []

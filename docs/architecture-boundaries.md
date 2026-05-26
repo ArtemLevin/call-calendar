@@ -64,8 +64,8 @@ Meeting metadata dropdown/source-of-truth endpoints:
 - `PATCH /api/meeting-settings`
 
 Colleague discovery/availability endpoints:
-- `GET /api/colleagues`
-- `GET /api/colleagues/{colleague_id}/availability`
+- `GET /api/colleagues` (supports `limit` + `offset` pagination)
+- `GET /api/colleagues/{colleague_id}/availability` (`404` unknown colleague, `422` invalid range)
 
 Why: excluding internal metadata avoids accidental client coupling and allows future extension through versioned contracts when needed.
 

@@ -10,8 +10,13 @@ class ColleagueRepository:
     def __init__(self, session: AsyncSession) -> None:
         self.session = session
 
-    async def list_all(self) -> list[Colleague]:
-        stmt: Select[tuple[Colleague]] = select(Colleague).order_by(Colleague.id.asc())
+    async def list_all(self, limit: int, offset: int) -> list[Colleague]:
+        stmt: Select[tuple[Colleague]] = (
+            select(Colleague)
+            .order_by(Colleague.id.asc())
+            .limit(limit)
+            .offset(offset)
+        )
         result = await self.session.execute(stmt)
         return list(result.scalars().all())
 
