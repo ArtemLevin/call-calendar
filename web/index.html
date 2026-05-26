@@ -29,8 +29,11 @@
       <section class="booking-card" aria-label="Booking card">
         <aside class="meeting-info">
           <div class="organizer">
-            <div class="avatar" aria-hidden="true">K</div>
-            <p class="organizer-name">Kirill Mokevnin</p>
+            <div class="avatar" id="colleague-avatar" aria-hidden="true">K</div>
+            <label class="organizer-select-wrap" for="colleague-select">
+              <span class="organizer-label">Colleague</span>
+              <select id="colleague-select" class="organizer-select" aria-label="Select colleague"></select>
+            </label>
           </div>
           <h1 id="meeting-title">30 Min Meeting</h1>
           <div class="meeting-meta-controls">
