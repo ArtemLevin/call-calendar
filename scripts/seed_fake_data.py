@@ -3,10 +3,20 @@ from __future__ import annotations
 import argparse
 import asyncio
 from datetime import datetime, timedelta
+from pathlib import Path
 import random
+import sys
 
 from faker import Faker
 from sqlalchemy import delete, select
+
+# Why: seed script is executed as a file path (`python3 scripts/seed_fake_data.py`) in Make,
+# so we pin the repository root in sys.path to keep absolute `app.*` imports stable
+# across local environments and CI runners with different working-directory semantics.
+REPO_ROOT = Path(__file__).resolve().parents[1]
+if str(REPO_ROOT) not in sys.path:
+    sys.path.insert(0, str(REPO_ROOT))
+
 
 from app.db.models.booking import Booking
 from app.db.models.colleague import Colleague
