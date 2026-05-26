@@ -100,3 +100,17 @@ Performance budgets used by smoke defaults:
 - root page: 1500ms;
 - create request: 2000ms;
 - upcoming request: 2000ms.
+
+
+## Seed fake data for manual QA
+
+```bash
+make migrate
+make seed-fake-data
+```
+
+Optional flags can be passed directly to the script:
+
+```bash
+python3 scripts/seed_fake_data.py --colleagues 10 --days 30 --bookings-per-colleague 40 --seed 123
+```
