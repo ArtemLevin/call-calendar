@@ -62,6 +62,11 @@ def downgrade() -> None:
         """
     )
 
+    # Why: if a previous SQLite batch migration attempt crashed, the temporary
+    # table can remain and block retry of clean-db/downgrade with
+    # "_alembic_tmp_bookings already exists".
+    op.execute("DROP TABLE IF EXISTS _alembic_tmp_bookings")
+
     with op.batch_alter_table("bookings") as batch_op:
         batch_op.drop_constraint("uq_bookings_colleague_slot_start", type_="unique")
         batch_op.drop_constraint("fk_bookings_colleague_id_colleagues", type_="foreignkey")
