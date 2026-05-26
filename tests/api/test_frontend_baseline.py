@@ -19,6 +19,7 @@ def test_root_serves_frontend_entrypoint() -> None:
     assert 'id="meeting-duration-select"' in response.text
     assert 'id="meeting-provider-select"' in response.text
     assert 'id="meeting-timezone-select"' in response.text
+    assert 'id="colleague-select"' in response.text
 
 
 def test_web_assets_are_served() -> None:
@@ -30,4 +31,5 @@ def test_web_assets_are_served() -> None:
     assert 'javascript' in response.headers['content-type']
     assert "fetch(`${config.API_BASE_URL}/meeting-metadata/options`)" in response.text
     assert "fetch(`${config.API_BASE_URL}/meeting-settings`)" in response.text
-    assert "meetingProviderSelect?.addEventListener('change'" in response.text
+    assert "fetch(`${config.API_BASE_URL}/colleagues/`)" in response.text
+    assert "/availability?from_ts=" in response.text

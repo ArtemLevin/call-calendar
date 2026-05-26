@@ -25,12 +25,14 @@ with engine.connect() as conn:
     tables = inspect(conn).get_table_names()
     if "bookings" not in tables:
         raise SystemExit("Missing bookings table after upgrade head")
+    if "colleagues" not in tables:
+        raise SystemExit("Missing colleagues table after upgrade head")
 
     conn.execute(
         text(
             """
-            INSERT INTO bookings(slot_start, customer_name, customer_email, status)
-            VALUES (:slot_start, :customer_name, :customer_email, :status)
+            INSERT INTO bookings(slot_start, customer_name, customer_email, status, meeting_provider, meeting_timezone, meeting_duration_minutes, colleague_id)
+            VALUES (:slot_start, :customer_name, :customer_email, :status, :meeting_provider, :meeting_timezone, :meeting_duration_minutes, :colleague_id)
             """
         ),
         {
@@ -38,6 +40,10 @@ with engine.connect() as conn:
             "customer_name": "Smoke",
             "customer_email": "smoke@example.com",
             "status": "PENDING",
+            "meeting_provider": "GOOGLE_MEET",
+            "meeting_timezone": "UTC",
+            "meeting_duration_minutes": "THIRTY",
+            "colleague_id": 1,
         },
     )
     conn.commit()
@@ -47,12 +53,16 @@ with engine.connect() as conn:
         raise SystemExit("Expected at least one booking row after insert")
 
     indexes = {item["name"] for item in inspect(conn).get_indexes("bookings")}
-    if "ix_bookings_slot_start" not in indexes:
-        raise SystemExit("Missing unique slot_start index after migrations")
+    if "ix_bookings_colleague_id" not in indexes:
+        raise SystemExit("Missing colleague_id index after migrations")
+
+    unique_constraints = {item["name"] for item in inspect(conn).get_unique_constraints("bookings")}
+    if "uq_bookings_colleague_slot_start" not in unique_constraints:
+        raise SystemExit("Missing per-colleague unique slot constraint after migrations")
 PY
 
 # Why: one-step rollback/forward cycle catches broken downgrade scripts early.
-alembic downgrade -1 >/dev/null
+alembic downgrade 5f9f1a2b3c4d >/dev/null
 alembic upgrade head >/dev/null
 
 echo "Migration smoke passed"
