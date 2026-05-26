@@ -28,6 +28,7 @@ class BookingRepository:
             meeting_provider=data.meeting_provider,
             meeting_timezone=data.meeting_timezone,
             meeting_duration_minutes=data.meeting_duration_minutes,
+            colleague_id=data.colleague_id if data.colleague_id is not None else 1,
         )
         self.session.add(booking)
         # Why: slot conflicts are a write-time race condition, so we treat database
@@ -48,7 +49,7 @@ class BookingRepository:
         # Why: only slot uniqueness violations should be converted into a domain
         # availability error; other integrity failures must surface unchanged.
         error_text = str(exc.orig).lower() if exc.orig is not None else ""
-        return "bookings.slot_start" in error_text and "unique" in error_text
+        return "unique" in error_text and ("bookings.colleague_id, bookings.slot_start" in error_text or "uq_bookings_colleague_slot_start" in error_text or "bookings.slot_start" in error_text)
 
     async def list_upcoming(
         self,
@@ -56,10 +57,16 @@ class BookingRepository:
         status: BookingStatus | None,
         limit: int,
         offset: int,
+        to_ts: datetime | None = None,
+        colleague_id: int | None = None,
     ) -> list[Booking]:
         # Why: DB-side filtering/pagination avoids materializing full datasets in API
         # memory, which keeps latency and memory use stable as data grows.
         stmt: Select[tuple[Booking]] = select(Booking).where(Booking.slot_start >= from_ts)
+        if to_ts is not None:
+            stmt = stmt.where(Booking.slot_start < to_ts)
+        if colleague_id is not None:
+            stmt = stmt.where(Booking.colleague_id == colleague_id)
         # Why: optional status filtering supports owner-oriented read views while
         # keeping the endpoint contract backward compatible when filter is omitted.
         if status is not None:

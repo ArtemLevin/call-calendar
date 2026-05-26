@@ -5,8 +5,9 @@ import pytest
 import pytest_asyncio
 from sqlalchemy.ext.asyncio import AsyncEngine, AsyncSession, async_sessionmaker, create_async_engine
 
-from app.db.models import Booking, MeetingSettings
+from app.db.models import Booking, Colleague, MeetingSettings
 from app.db.session import Base
+from app.schemas.booking import MeetingDurationMinutes, MeetingProvider, MeetingTimezone
 
 
 @pytest.fixture(scope="session")
@@ -36,5 +37,15 @@ async def db_session(test_engine: AsyncEngine) -> AsyncGenerator[AsyncSession, N
         # deterministic and eliminates hidden coupling through persistent state.
         await session.execute(MeetingSettings.__table__.delete())
         await session.execute(Booking.__table__.delete())
+        await session.execute(Colleague.__table__.delete())
+        session.add(
+            Colleague(
+                id=1,
+                name="Kirill Mokevnin",
+                default_meeting_provider=MeetingProvider.GOOGLE_MEET,
+                timezone=MeetingTimezone.ASIA_YEKATERINBURG,
+                meeting_duration_minutes=MeetingDurationMinutes.THIRTY,
+            )
+        )
         await session.commit()
         yield session
