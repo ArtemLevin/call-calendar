@@ -7,14 +7,20 @@
     <link rel="stylesheet" href="/web/styles.css" />
   </head>
   <body>
-    <main class="booking-page">
+    <main class="booking-page aurora-dark">
       <section class="hero" aria-label="Intro">
-        <p class="hero-kicker">Call Calendar</p>
-        <h1>Book polished meetings in seconds</h1>
+        <p class="hero-kicker">Call Calendar · Mono Pro</p>
+        <h1>Book your perfect slot in one tap</h1>
         <p class="hero-subtitle">
-          Pick a date, adjust meeting defaults, and confirm your slot with an interface designed for speed.
+          Monochrome-first scheduling cockpit with strict contrast, calm hierarchy, and colleague-aware availability.
         </p>
+        <div class="hero-stats" aria-label="Live stats">
+          <div class="stat-pill"><span class="stat-label">Design preset</span><strong>Исходный дизайн</strong></div>
+          <div class="stat-pill"><span class="stat-label">Mode</span><strong>Monochrome Precision</strong></div>
+          <div class="stat-pill"><span class="stat-label">Latency</span><strong>&lt; 1 sec</strong></div>
+        </div>
       </section>
+
       <section class="top-controls" aria-label="Display controls">
         <button id="overlay-toggle" class="toggle" type="button" role="switch" aria-checked="true" aria-label="Overlay my calendar">
           <span class="toggle-knob"></span>
@@ -29,8 +35,11 @@
       <section class="booking-card" aria-label="Booking card">
         <aside class="meeting-info">
           <div class="organizer">
-            <div class="avatar" aria-hidden="true">K</div>
-            <p class="organizer-name">Kirill Mokevnin</p>
+            <div class="avatar" id="colleague-avatar" aria-hidden="true">K</div>
+            <label class="organizer-select-wrap" for="colleague-select">
+              <span class="organizer-label">Colleague</span>
+              <select id="colleague-select" class="organizer-select" aria-label="Select colleague"></select>
+            </label>
           </div>
           <h1 id="meeting-title">30 Min Meeting</h1>
           <div class="meeting-meta-controls">
@@ -81,7 +90,7 @@
         </section>
       </section>
 
-      <p class="brand">Call Calendar</p>
+      <p class="brand">Call Calendar · Mono Pro</p>
     </main>
 
     <script>
