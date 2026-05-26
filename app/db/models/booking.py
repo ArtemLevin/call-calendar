@@ -1,6 +1,6 @@
 from datetime import datetime
 
-from sqlalchemy import DateTime, Enum, Integer, String, func
+from sqlalchemy import DateTime, Enum, ForeignKey, Integer, String, UniqueConstraint, func
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.db.session import Base
@@ -9,6 +9,7 @@ from app.schemas.booking import BookingStatus, MeetingDurationMinutes, MeetingPr
 
 class Booking(Base):
     __tablename__ = "bookings"
+    __table_args__ = (UniqueConstraint("colleague_id", "slot_start", name="uq_bookings_colleague_slot_start"),)
     DEFAULT_PROVIDER = MeetingProvider.GOOGLE_MEET
     DEFAULT_TIMEZONE = MeetingTimezone.ASIA_YEKATERINBURG
     DEFAULT_DURATION = MeetingDurationMinutes.THIRTY
@@ -17,9 +18,8 @@ class Booking(Base):
     slot_start: Mapped[datetime] = mapped_column(
         DateTime(timezone=False),
         nullable=False,
-        index=True,
-        unique=True,
     )
+    colleague_id: Mapped[int] = mapped_column(ForeignKey("colleagues.id"), nullable=False, index=True, default=1)
     customer_name: Mapped[str] = mapped_column(String(255), nullable=False)
     customer_email: Mapped[str] = mapped_column(String(255), nullable=False, index=True)
     status: Mapped[BookingStatus] = mapped_column(
