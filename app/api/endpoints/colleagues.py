@@ -53,7 +53,7 @@ async def get_colleague_availability(
 ) -> ColleagueAvailabilityResponse:
     if to_ts <= from_ts:
         raise HTTPException(
-            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
             detail="to_ts must be greater than from_ts",
         )
     try:

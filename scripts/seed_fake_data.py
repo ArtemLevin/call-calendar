@@ -21,7 +21,7 @@ if str(REPO_ROOT) not in sys.path:
 from app.db.models.booking import Booking
 from app.db.models.colleague import Colleague
 from app.db.models.meeting_settings import MeetingSettings
-from app.db.session import AsyncSessionLocal
+from app.db.session import AsyncSessionLocal, DATABASE_URL
 from app.schemas.booking import BookingStatus, MeetingDurationMinutes, MeetingProvider, MeetingTimezone
 
 
@@ -49,14 +49,19 @@ async def _seed(colleagues: int, days: int, bookings_per_colleague: int, reset: 
             await session.commit()
 
         existing = list((await session.execute(select(Colleague).order_by(Colleague.id.asc()))).scalars().all())
+        existing_by_id = {item.id: item for item in existing}
         next_id = (existing[-1].id + 1) if existing else 1
 
         providers = list(MeetingProvider)
         timezones = list(MeetingTimezone)
 
-        while len(existing) < colleagues:
+        # Why: explicit id-range seeding guarantees requested colleague count
+        # even if previous local runs left sparse IDs after manual edits.
+        for colleague_id in range(1, colleagues + 1):
+            if colleague_id in existing_by_id:
+                continue
             colleague = Colleague(
-                id=next_id,
+                id=colleague_id if colleague_id == 1 else next_id,
                 name=faker.name(),
                 default_meeting_provider=random.choice(providers),
                 timezone=random.choice(timezones),
@@ -68,7 +73,10 @@ async def _seed(colleagues: int, days: int, bookings_per_colleague: int, reset: 
 
         await session.commit()
 
+        existing = list((await session.execute(select(Colleague).order_by(Colleague.id.asc()))).scalars().all())
         colleague_ids = [item.id for item in existing]
+        if len(colleague_ids) < colleagues:
+            raise RuntimeError(f"Expected at least {colleagues} colleagues after seed, got {len(colleague_ids)}")
         status_pool = [BookingStatus.PENDING, BookingStatus.CONFIRMED, BookingStatus.CANCELLED, BookingStatus.COMPLETED]
 
         start_day = datetime.utcnow().replace(hour=0, minute=0, second=0, microsecond=0)
@@ -99,7 +107,7 @@ async def _seed(colleagues: int, days: int, bookings_per_colleague: int, reset: 
                 created += 1
 
         await session.commit()
-        print(f"Seeded colleagues={len(colleague_ids)} bookings={created}")
+        print(f"Seeded colleagues={len(colleague_ids)} bookings={created} database={DATABASE_URL}")
 
 
 def main() -> None:

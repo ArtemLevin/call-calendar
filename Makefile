@@ -187,7 +187,7 @@ clean-db: ## Drop and recreate database (WARNING: destroys data)
 
 seed-fake-data: ## Populate DB with fake colleagues/bookings for manual QA
 	@echo "Seeding fake data..."
-	$(PYTHON) scripts/seed_fake_data.py --reset
+	$(PYTHON) scripts/seed_fake_data.py --reset --colleagues 6 --bookings-per-colleague 24 --days 21
 
 # =============================================================================
 # Help

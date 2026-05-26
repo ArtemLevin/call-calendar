@@ -64,7 +64,7 @@ async def create_booking(
     try:
         booking = await service.create_booking(data)
     except InvalidBookingSlotError as exc:
-        raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail=str(exc)) from exc
+        raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_CONTENT, detail=str(exc)) from exc
     except SlotNotAvailableError as exc:
         raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=str(exc)) from exc
     return BookingResponse.model_validate(booking)
