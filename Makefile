@@ -1,7 +1,7 @@
 # Booking Calendar Service - Development Commands
 # ================================================
 
-.PHONY: setup setup-mirror setup-wheelhouse build-wheelhouse dev test lint typecheck migrate coverage clean help test-ci-mirror test-ci-wheelhouse smoke-fullstack migrate-smoke migration-drift-check
+.PHONY: setup setup-mirror setup-wheelhouse build-wheelhouse dev test lint typecheck migrate coverage clean help test-ci-mirror test-ci-wheelhouse smoke-fullstack migrate-smoke migration-drift-check seed-fake-data
 
 # Configuration
 PYTHON := python3
@@ -180,6 +180,14 @@ clean-db: ## Drop and recreate database (WARNING: destroys data)
 	$(ALEMBIC) downgrade base
 	$(ALEMBIC) upgrade head
 	@echo "Database recreated!"
+
+# =============================================================================
+# Data Seeding
+# =============================================================================
+
+seed-fake-data: ## Populate DB with fake colleagues/bookings for manual QA
+	@echo "Seeding fake data..."
+	$(PYTHON) scripts/seed_fake_data.py --reset
 
 # =============================================================================
 # Help

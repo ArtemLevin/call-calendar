@@ -5,6 +5,7 @@ import pytest
 from sqlalchemy.ext.asyncio import AsyncEngine, AsyncSession, async_sessionmaker
 
 from app.db.repositories.booking_repository import BookingRepository
+from app.db.repositories.colleague_repository import ColleagueRepository
 from app.db.repositories.meeting_settings_repository import MeetingSettingsRepository
 from app.exceptions import (
     BookingNotFoundError,
@@ -17,7 +18,7 @@ from app.services.booking_service import BookingService
 
 
 def make_service(session: AsyncSession) -> BookingService:
-    return BookingService(BookingRepository(session), MeetingSettingsRepository(session))
+    return BookingService(BookingRepository(session), MeetingSettingsRepository(session), ColleagueRepository(session))
 
 
 @pytest.mark.asyncio

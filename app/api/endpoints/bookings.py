@@ -5,6 +5,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.db.repositories.booking_repository import BookingRepository
+from app.db.repositories.colleague_repository import ColleagueRepository
 from app.db.repositories.meeting_settings_repository import MeetingSettingsRepository
 from app.db.session import get_db_session
 from app.exceptions import (
@@ -35,11 +36,18 @@ def get_meeting_settings_repository(
     return MeetingSettingsRepository(session=db)
 
 
+def get_colleague_repository(
+    db: AsyncSession = Depends(get_db_session),
+) -> ColleagueRepository:
+    return ColleagueRepository(session=db)
+
+
 def get_booking_service(
     repository: BookingRepository = Depends(get_booking_repository),
     meeting_settings_repository: MeetingSettingsRepository = Depends(get_meeting_settings_repository),
+    colleague_repository: ColleagueRepository = Depends(get_colleague_repository),
 ) -> BookingService:
-    return BookingService(repository, meeting_settings_repository)
+    return BookingService(repository, meeting_settings_repository, colleague_repository)
 
 
 def get_booking_service_dep(
